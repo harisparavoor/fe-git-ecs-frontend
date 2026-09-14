@@ -172,7 +172,7 @@ jobs:
           
           
       - name: Checkout
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
@@ -181,7 +181,7 @@ jobs:
       # Remove this step if your Docker build already handles install/build.
       # -----------------------------------------------------------------
       - name: Setup Node.js
-        uses: actions/setup-node@v7.0.1
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
 
@@ -201,7 +201,7 @@ jobs:
       # AWS auth via OIDC -- no long-lived access keys stored anywhere.
       # -----------------------------------------------------------------
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v6.2.4
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
