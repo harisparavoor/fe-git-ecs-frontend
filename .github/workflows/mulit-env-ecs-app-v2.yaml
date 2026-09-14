@@ -1,4 +1,4 @@
-name: multi-env-ecsapp-deployment
+name: multi-env-ecs-app-v2
 on:
   workflow_dispatch:
     inputs:
@@ -117,15 +117,15 @@ jobs:
 
           # ---- Common checks: required for every environment ----
           echo "Validating common infra configuration..."
-          check "AWS_REGION"                 "${{ vars.AWS_REGION }}"
-          check "ECS_CLUSTER"                "${{ vars.ECS_CLUSTER}}"
-          check "ECS_SERVICE"                "${{ vars.ECS_SERVICE}}"
-          check "ECS_CONTAINER_NAME"         "${{ vars.ECS_CONTAINER_NAME }}"
-          check "ECR_REPOSITORY"             "${{ vars.ECR_REPOSITORY}}"
-          check "ECS_TASK_DEFINITION_FAMILY" "${{ vars.ECS_TASK_DEFINITION_FAMILY}}"          
-          check "AWS_ROLE_ARN"               "${{ secrets.AWS_ROLE_ARN }}"
-          check "BACKEND_PORT"               "${{ vars.BACKEND_PORT }}"
-          check "ALB_NAME"                   "${{ vars.ALB_NAME }}"      
+          check "AWS_REGION"                  "${{ vars.AWS_REGION }}"
+          check "ECS_CLUSTER"                 "${{ vars.ECS_CLUSTER }}"
+          check "ECS_SERVICE"                 "${{ vars.ECS_SERVICE }}"
+          check "ECS_CONTAINER_NAME"          "${{ vars.ECS_CONTAINER_NAME }}"
+          check "ECR_REPOSITORY"              "${{ vars.ECR_REPOSITORY }}"
+          check "ECS_TASK_DEFINITION_FAMILY"  "${{ vars.ECS_TASK_DEFINITION_FAMILY }}"          
+          check "AWS_ROLE_ARN"                "${AWS_ROLE_ARN}"
+          check "BACKEND_PORT"                "${{ vars.BACKEND_PORT }}"
+          check "ALB_NAME"                    "${{ vars.ALB_NAME }}"      
 
           # ---- Environment-specific checks ----
           case "$TARGET_ENV" in
@@ -164,7 +164,7 @@ jobs:
           echo "All required configuration values are present for '$TARGET_ENV'."
 
           # Pass resolved values forward so later steps in this job can use
-          # them as real shell env vars (inline ${{ }} expressions above are
+          # them as real shell env vars (inline  expressions above are
           # only visible inside THIS step, not subsequent ones).
           {
             echo "BACKEND_PORT=${{ vars.BACKEND_PORT }}"
@@ -172,7 +172,7 @@ jobs:
           
           
       - name: Checkout
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
@@ -181,7 +181,7 @@ jobs:
       # Remove this step if your Docker build already handles install/build.
       # -----------------------------------------------------------------
       - name: Setup Node.js
-        uses: actions/setup-node@v7.0.1
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
 
@@ -201,14 +201,14 @@ jobs:
       # AWS auth via OIDC -- no long-lived access keys stored anywhere.
       # -----------------------------------------------------------------
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v6.2.4
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: ecr-login
-        uses: aws-actions/amazon-ecr-login@v2.1.7
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Get commit hash
         id: get-commit-hash
@@ -295,7 +295,7 @@ jobs:
 
       - name: Update image ID in task definition
         id: render-task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1.9.0
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-definition.json
           container-name: ${{vars.ECS_CONTAINER_NAME}} 
@@ -303,7 +303,7 @@ jobs:
 
       - name: Deploy new task definition to ECS
         id: deploy-ecs
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2.6.3
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render-task-def.outputs.task-definition }}
           cluster: ${{vars.ECS_CLUSTER}}
