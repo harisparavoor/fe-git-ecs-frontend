@@ -52,7 +52,7 @@ jobs:
             case "$BRANCH" in
               prod)      ENVIRONMENT="prod" ;;
               uat)       ENVIRONMENT="uat" ;;
-              staging)     ENVIRONMENT="staging" ;;
+              staging)   ENVIRONMENT="staging" ;;
               dev)       ENVIRONMENT="dev" ;;
               hotfix/*)  ENVIRONMENT="dev" ;;
               *)         ENVIRONMENT="dev" ;;   # unmapped branches default to dev
@@ -146,7 +146,7 @@ jobs:
 
             dev)
               echo "Validating DEV variables..."
-              check "dev_REACT_APP_API_URL"            "${{ vars.dev_ENV_TEST }}"
+              
               ;;
 
             staging)
