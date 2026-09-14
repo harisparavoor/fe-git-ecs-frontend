@@ -1,4 +1,4 @@
-name: multi-env-ecsapp-deployment
+name: multi-env-ecs-app-v2
 on:
   workflow_dispatch:
     inputs:
@@ -117,15 +117,15 @@ jobs:
 
           # ---- Common checks: required for every environment ----
           echo "Validating common infra configuration..."
-          check "AWS_REGION"                 "${{ vars.AWS_REGION }}"
-          check "ECS_CLUSTER"                "${{ vars.ECS_CLUSTER}}"
-          check "ECS_SERVICE"                "${{ vars.ECS_SERVICE}}"
-          check "ECS_CONTAINER_NAME"         "${{ vars.ECS_CONTAINER_NAME }}"
-          check "ECR_REPOSITORY"             "${{ vars.ECR_REPOSITORY}}"
-          check "ECS_TASK_DEFINITION_FAMILY" "${{ vars.ECS_TASK_DEFINITION_FAMILY}}"          
-          check "AWS_ROLE_ARN"               "${{ secrets.AWS_ROLE_ARN }}"
-          check "BACKEND_PORT"               "${{ vars.BACKEND_PORT }}"
-          check "ALB_NAME"                   "${{ vars.ALB_NAME }}"      
+          check "AWS_REGION"                  "${{ vars.AWS_REGION }}"
+          check "ECS_CLUSTER"                 "${{ vars.ECS_CLUSTER }}"
+          check "ECS_SERVICE"                 "${{ vars.ECS_SERVICE }}"
+          check "ECS_CONTAINER_NAME"          "${{ vars.ECS_CONTAINER_NAME }}"
+          check "ECR_REPOSITORY"              "${{ vars.ECR_REPOSITORY }}"
+          check "ECS_TASK_DEFINITION_FAMILY"  "${{ vars.ECS_TASK_DEFINITION_FAMILY }}"          
+          check "AWS_ROLE_ARN"                "${AWS_ROLE_ARN}"
+          check "BACKEND_PORT"                "${{ vars.BACKEND_PORT }}"
+          check "ALB_NAME"                    "${{ vars.ALB_NAME }}"      
 
           # ---- Environment-specific checks ----
           case "$TARGET_ENV" in
@@ -164,7 +164,7 @@ jobs:
           echo "All required configuration values are present for '$TARGET_ENV'."
 
           # Pass resolved values forward so later steps in this job can use
-          # them as real shell env vars (inline ${{ }} expressions above are
+          # them as real shell env vars (inline  expressions above are
           # only visible inside THIS step, not subsequent ones).
           {
             echo "BACKEND_PORT=${{ vars.BACKEND_PORT }}"
