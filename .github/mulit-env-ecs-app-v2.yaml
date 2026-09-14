@@ -70,7 +70,7 @@ jobs:
           set -euo pipefail
           # "dev" is permissive: any branch (named or not) may deploy there.
           # Every other environment only accepts its own exactly-matching
-          # branch name (stage <- stage, uat <- uat, prod <- prod).
+          # branch name (staging <- staging, uat <- uat, prod <- prod).
           if [[ "$ENVIRONMENT" != "dev" && "$BRANCH" != "$ENVIRONMENT" ]]; then
             echo "::error::Branch '$BRANCH' is not allowed to deploy to environment '$ENVIRONMENT'. Only the '$ENVIRONMENT' branch (or 'dev') may target it." >&2
             exit 1
@@ -91,20 +91,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
-    env:
-      TF_IN_AUTOMATION: true
-      TF_INPUT: false
-      AWS_REGION: ${{ vars.AWS_REGION }}
-      ECS_CLUSTER: "${{ vars.project_name }}-${{ needs.resolve-environment.outputs.environment }}-cluster"
-      ECS_SERVICE: "${{ vars.project_name }}-${{ needs.resolve-environment.outputs.environment }}-${{ vars.app }}-service"
-      ECS_TASK_DEFINITION_FAMILY: "${{ vars.project_name }}-${{ vars.app }}-${{ needs.resolve-environment.outputs.environment }}"
-      ECS_CONTAINER_NAME: ${{ vars.app }}
-      ECR_REPOSITORY: "${{ vars.project_name }}-${{ vars.app }}-${{ needs.resolve-environment.outputs.environment }}"
-      # Name of the ALB to look up at runtime (must match what Terraform created).
-      ALB_NAME: "${{ vars.project_name }}-${{ needs.resolve-environment.outputs.environment }}-alb"
-      BACKEND_PORT: ${{ vars.BACKEND_PORT }}
-
     steps:
       # -----------------------------------------------------------------
       # 0. Fail fast if any required repo Variable/Secret is missing —
@@ -131,32 +117,36 @@ jobs:
 
           # ---- Common checks: required for every environment ----
           echo "Validating common infra configuration..."
-          check "AWS_REGION"       "${{ vars.AWS_REGION }}"
-          check "project_name"     "${{ vars.project_name }}"
-          check "app"              "${{ vars.app }}"
-          check "BACKEND_PORT"     "${{ vars.BACKEND_PORT }}"
-          check "AWS_ROLE_ARN"     "${AWS_ROLE_ARN}"
+          check "AWS_REGION"                 "${{ vars.AWS_REGION }}"
+          check "ECS_CLUSTER"                "${{ vars.ECS_CLUSTER}}"
+          check "ECS_SERVICE"                "${{ vars.ECS_SERVICE}}"
+          check "ECS_CONTAINER_NAME"         "${{ vars.ECS_CONTAINER_NAME }}"
+          check "ECR_REPOSITORY"             "${{ vars.ECR_REPOSITORY}}"
+          check "ECS_TASK_DEFINITION_FAMILY" "${{ vars.ECS_TASK_DEFINITION_FAMILY}}"          
+          check "AWS_ROLE_ARN"               "${{ secrets.AWS_ROLE_ARN }}"
+          check "BACKEND_PORT"               "${{ vars.BACKEND_PORT }}"
+          check "ALB_NAME"                   "${{ vars.ALB_NAME }}"      
 
           # ---- Environment-specific checks ----
           case "$TARGET_ENV" in
             prod)
               echo "Validating PROD variables..."
-              check "PROD_REACT_APP_API_URL"            "${{ vars.prod_ENV_TEST }}"
+              check "PROD_APP_test_URL"   "${{ vars.PROD_APP_test_URL }}"
               ;;
 
             dev)
               echo "Validating DEV variables..."
-              
+              check "dev_APP_call_URL"    "${{ vars.dev_APP_call_URL }}"
               ;;
 
             staging)
               echo "Validating STAGE variables..."
-              check "stage_REACT_APP_API_URL"            "${{ vars.stage_ENV_TEST }}"
-               ;;
+              check "stage_REACT_APP_api" "${{ vars.stage_REACT_APP_api }}"
+              ;;
 
             uat)
               echo "Validating UAT variables..."
-              check "uat_REACT_APP_API_URL"            "${{ vars.uat_ENV_TEST }}"
+              check "uat_env_APP_URL"     "${{ vars.uat_env_APP_URL }}"
               ;;
 
             *)
@@ -165,6 +155,7 @@ jobs:
               ;;
           esac
 
+          # ---- Fail fast BEFORE touching any files or deploying ----
           if [ "$missing" = "1" ]; then
             echo "::error::One or more required variables are missing. Stopping pipeline."
             exit 1
@@ -172,18 +163,25 @@ jobs:
 
           echo "All required configuration values are present for '$TARGET_ENV'."
 
+          # Pass resolved values forward so later steps in this job can use
+          # them as real shell env vars (inline ${{ }} expressions above are
+          # only visible inside THIS step, not subsequent ones).
+          {
+            echo "BACKEND_PORT=${{ vars.BACKEND_PORT }}"
+          } >> "$GITHUB_ENV"
+          
+          
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
-
       # -----------------------------------------------------------------
       # Optional sanity build of the app before containerizing.
       # Remove this step if your Docker build already handles install/build.
       # -----------------------------------------------------------------
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7.0.1
         with:
           node-version: '22'
 
@@ -203,14 +201,14 @@ jobs:
       # AWS auth via OIDC -- no long-lived access keys stored anywhere.
       # -----------------------------------------------------------------
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6.2.4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: ecr-login
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@v2.1.7
 
       - name: Get commit hash
         id: get-commit-hash
@@ -227,12 +225,12 @@ jobs:
         run: |
           set -euo pipefail
           ALB_DNS=$(aws elbv2 describe-load-balancers \
-            --names "$ALB_NAME" \
+            --names "${{vars.ALB_NAME}}" \
             --query "LoadBalancers[0].DNSName" \
             --output text)
 
           if [ -z "$ALB_DNS" ] || [ "$ALB_DNS" == "None" ]; then
-            echo "::error::Could not resolve DNS name for ALB '$ALB_NAME'. Check ALB_NAME matches the actual load balancer name."
+            echo "::error::Could not resolve DNS name for ALB '${{vars.ALB_NAME}}'. Check ALB_NAME matches the actual load balancer name."
             exit 1
           fi
 
@@ -255,8 +253,8 @@ jobs:
           cat webpack.config.js
 
       # -----------------------------------------------------------------
-      # Build & push the Docker image, tag with :latest and short commit hash.
-      # Build ONCE with the commit-hash tag, then derive :latest from it.
+      # Build & push the Docker image, short commit hash.
+      # Build ONCE with the commit-hash tag, 
       # -----------------------------------------------------------------
       - name: Build, tag and push image to Amazon ECR
         id: build-image
@@ -267,9 +265,9 @@ jobs:
           COMMIT_HASH: ${{ steps.get-commit-hash.outputs.commit-hash }}
         run: |
           set -euo pipefail
-          REPOSITORY_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}"
+          REPOSITORY_URI="${ECR_REGISTRY}/${{vars.ECR_REPOSITORY}}" 
           IMAGE_TAG="${ENVIRONMENT}-${COMMIT_HASH}"
-          LATEST_TAG="${ENVIRONMENT}-latest"
+        
 
           echo "Repository URI: $REPOSITORY_URI"
           echo "Image tag     : $IMAGE_TAG"
@@ -278,11 +276,8 @@ jobs:
             --build-arg REACT_APP_BACKEND_URL="$REACT_APP_BACKEND_URL" \
             -t "$REPOSITORY_URI:$IMAGE_TAG" .
 
-          docker tag "${REPOSITORY_URI}:${IMAGE_TAG}" "${REPOSITORY_URI}:${LATEST_TAG}"
-
           docker push "${REPOSITORY_URI}:${IMAGE_TAG}"
-          docker push "${REPOSITORY_URI}:${LATEST_TAG}"
-
+          
           echo "image_uri=$REPOSITORY_URI:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
       # -----------------------------------------------------------------
@@ -294,23 +289,23 @@ jobs:
         run: |
           set -euo pipefail
           aws ecs describe-task-definition \
-            --task-definition "$ECS_TASK_DEFINITION_FAMILY" \
+            --task-definition "${{vars.ECS_TASK_DEFINITION_FAMILY}}" \
             --query "taskDefinition" \
             --output json > task-definition.json
 
       - name: Update image ID in task definition
         id: render-task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        uses: aws-actions/amazon-ecs-render-task-definition@v1.9.0
         with:
           task-definition: task-definition.json
-          container-name: ${{ env.ECS_CONTAINER_NAME }}
+          container-name: ${{vars.ECS_CONTAINER_NAME}} 
           image: ${{ steps.build-image.outputs.image_uri }}
 
       - name: Deploy new task definition to ECS
         id: deploy-ecs
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2.6.3
         with:
           task-definition: ${{ steps.render-task-def.outputs.task-definition }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{vars.ECS_CLUSTER}}
+          service: ${{vars.ECS_SERVICE}}
           wait-for-service-stability: true
