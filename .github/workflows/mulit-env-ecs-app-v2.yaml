@@ -481,7 +481,7 @@ jobs:
           fi
 
           echo "Resolved ALB DNS: $ALB_DNS"
-          echo "REACT_APP_BACKEND_URL=http://${ALB_DNS}:${BACKEND_PORT}" >> "$GITHUB_ENV"
+          echo "REACT_APP_BACKEND_URL=http://${ALB_DNS}:${{ vars.BACKEND_PORT }}" >> "$GITHUB_ENV"
 
       # -----------------------------------------------------------------
       # Replace placeholder in webpack.config.js with the real backend URL.
