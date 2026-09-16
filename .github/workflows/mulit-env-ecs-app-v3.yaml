@@ -1,4 +1,4 @@
-name: Multi-env-portel-app-deployment-v1
+name: multi-env-ecs-app-v2
 
 on:
   workflow_dispatch:
@@ -526,7 +526,7 @@ jobs:
           docker build \
             -build-arg REACT_APP_BACKEND_URL="$REACT_APP_BACKEND_URL" \
             -t "$REPOSITORY_URI:$IMAGE_TAG" .
-            
+
           docker push "$REPOSITORY_URI:$IMAGE_TAG"
 
           # Resolve the immutable ECR digest.
