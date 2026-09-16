@@ -278,26 +278,26 @@ jobs:
           check "AD_API_SCOPE"               "${{ vars.REACT_APP_AZURE_AD_API_SCOPE }}"
           check "CHAT_ORIGIN"                "${{ vars.REACT_APP_CHAT_ORIGIN }}"
           check "NOTES_ORIGIN"               "${{ vars.REACT_APP_NOTES_ORIGIN }}"
-          check "BACKEND_PORT"                "${{ vars.BACKEND_PORT }}"
-          check "ALB_NAME"                    "${{ vars.ALB_NAME }}"  
+          check "BACKEND_PORT"               "${{ vars.BACKEND_PORT }}"
+          check "ALB_NAME"                   "${{ vars.ALB_NAME }}"  
      
           # Environment-specific configuration.
           case "$TARGET_ENV" in
 
             prod)
-              check "PROD_Env_specific_value"  "$vars.PROD_ENV_SPECIFIC_VALUE"
+              check "PROD_Env_specific_value"  "${{ vars.PROD_ENV_SPECIFIC_VALUE }}"
               ;;
 
             dev)
-              check "dev_Env_specific_value"  "$vars.DEV_ENV_SPECIFIC_VALUE"
+              check "dev_Env_specific_value"  "${{ vars.DEV_ENV_SPECIFIC_VALUE }}"
               ;;
 
             staging)
-              check "stage_Env_specific_value"  "$vars.STAGING_ENV_SPECIFIC_VALUE"
+              check "stage_Env_specific_value"  "${{ vars.STAGING_ENV_SPECIFIC_VALUE }}"
               ;;
 
             uat)
-              check "uat_Env_specific_value"  "$vars.UAT_ENV_SPECIFIC_VALUE"
+              check "uat_Env_specific_value"  "${{ vars.UAT_ENV_SPECIFIC_VALUE }}"
               ;;
 
             *)
