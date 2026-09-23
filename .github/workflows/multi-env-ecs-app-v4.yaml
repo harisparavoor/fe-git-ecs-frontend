@@ -1,0 +1,356 @@
+name: multi-env-ecs-app-v4
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to deploy (defaults to the branch this workflow is run from)"
+        required: false
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  id-token: write
+  contents: read
+
+# ============================================================================
+# JOB 1: Resolve and validate deployment environment
+#
+# Environment is NOT entered manually.
+# It is determined from the branch:
+#
+#   dev       -> dev
+#   staging   -> staging
+#   uat       -> uat
+#   prod      -> prod
+#   hotfix/*  -> dev
+#
+# This job does not have `environment:` configured, so it cannot access
+# environment-specific secrets.
+# ============================================================================
+
+jobs:
+
+  resolve-environment:
+
+    name: Resolve target environment
+
+    runs-on: ubuntu-24.04
+
+    outputs:
+      environment: ${{ steps.resolve.outputs.environment }}
+      branch: ${{ steps.resolve.outputs.branch }}
+
+    steps:
+
+      # ----------------------------------------------------------------------
+      # Resolve branch and environment
+      # ----------------------------------------------------------------------
+
+      - name: Resolve environment and branch
+
+        id: resolve
+
+        shell: bash
+
+        env:
+          INPUT_BRANCH: ${{ inputs.branch }}
+          TRIGGER_REF_NAME: ${{ github.ref_name }}
+
+        run: |
+          set -euo pipefail
+
+          # --------------------------------------------------------------
+          # Resolve branch
+          # --------------------------------------------------------------
+
+          BRANCH="${INPUT_BRANCH:-$TRIGGER_REF_NAME}"
+
+          if [[ -z "$BRANCH" ]]; then
+            echo "::error::Deployment branch could not be resolved."
+            exit 1
+          fi
+
+          echo "Requested branch: $BRANCH"
+
+
+          # --------------------------------------------------------------
+          # Validate branch name
+          #
+          # Allowed:
+          #   dev
+          #   staging
+          #   uat
+          #   prod
+          #   hotfix/*
+          # --------------------------------------------------------------
+
+          case "$BRANCH" in
+
+            dev|staging|uat|prod|hotfix/*)
+              ;;
+
+            *)
+              echo "::error::Invalid branch name '$BRANCH'."
+              echo "::error::Allowed branches: dev, staging, uat, prod, hotfix/*."
+              echo "::error::Branch names and hotfix prefix must use lowercase."
+              exit 1
+              ;;
+
+          esac
+
+
+          # --------------------------------------------------------------
+          # Determine GitHub Environment from branch
+          # --------------------------------------------------------------
+
+          case "$BRANCH" in
+
+            dev)
+              ENVIRONMENT="dev"
+              ;;
+
+            staging)
+              ENVIRONMENT="staging"
+              ;;
+
+            uat)
+              ENVIRONMENT="uat"
+              ;;
+
+            prod)
+              ENVIRONMENT="prod"
+              ;;
+
+            hotfix/*)
+              ENVIRONMENT="dev"
+              ;;
+
+            *)
+              echo "::error::Unable to determine deployment environment."
+              exit 1
+              ;;
+
+          esac
+
+
+          # --------------------------------------------------------------
+          # Set outputs
+          # --------------------------------------------------------------
+
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
+
+
+          # --------------------------------------------------------------
+          # Display resolved values
+          # --------------------------------------------------------------
+
+          echo ""
+          echo "=========================================="
+          echo "Deployment Resolution"
+          echo "=========================================="
+          echo "Branch       : $BRANCH"
+          echo "Environment  : $ENVIRONMENT"
+          echo "=========================================="
+
+
+      # ----------------------------------------------------------------------
+      # Validate branch/environment relationship
+      # ----------------------------------------------------------------------
+
+      - name: Validate branch is allowed to deploy to environment
+
+        env:
+          ENVIRONMENT: ${{ steps.resolve.outputs.environment }}
+          BRANCH: ${{ steps.resolve.outputs.branch }}
+
+        shell: bash
+
+        run: |
+          set -euo pipefail
+
+          echo "Validating:"
+          echo "  Branch      : $BRANCH"
+          echo "  Environment : $ENVIRONMENT"
+          echo ""
+
+          case "$ENVIRONMENT" in
+
+            dev)
+
+              # dev accepts:
+              #   dev
+              #   hotfix/*
+
+              if [[ "$BRANCH" != "dev" && "$BRANCH" != hotfix/* ]]; then
+
+                echo "::error::Branch '$BRANCH' is not allowed to deploy to dev."
+                echo "::error::Only 'dev' or 'hotfix/*' branches may deploy to dev."
+
+                exit 1
+
+              fi
+
+              ;;
+
+
+            staging)
+
+              if [[ "$BRANCH" != "staging" ]]; then
+
+                echo "::error::Branch '$BRANCH' is not allowed to deploy to staging."
+                echo "::error::Only the 'staging' branch may deploy to staging."
+
+                exit 1
+
+              fi
+
+              ;;
+
+
+            uat)
+
+              if [[ "$BRANCH" != "uat" ]]; then
+
+                echo "::error::Branch '$BRANCH' is not allowed to deploy to uat."
+                echo "::error::Only the 'uat' branch may deploy to uat."
+
+                exit 1
+
+              fi
+
+              ;;
+
+
+            prod)
+
+              if [[ "$BRANCH" != "prod" ]]; then
+
+                echo "::error::Branch '$BRANCH' is not allowed to deploy to prod."
+                echo "::error::Only the 'prod' branch may deploy to prod."
+
+                exit 1
+
+              fi
+
+              ;;
+
+
+            *)
+
+              echo "::error::Unsupported environment '$ENVIRONMENT'."
+              exit 1
+
+              ;;
+
+          esac
+
+
+          echo ""
+          echo "=========================================="
+          echo "Validation successful"
+          echo "=========================================="
+          echo "Branch '$BRANCH' is authorized for"
+          echo "environment '$ENVIRONMENT'."
+          echo "=========================================="
+
+
+  # ==========================================================================
+  # JOB 2: Deployment
+  #
+  # The GitHub Environment is dynamically selected based on Job 1 output.
+  #
+  # GitHub will now apply the protection rules, reviewers, variables and
+  # secrets configured for that environment.
+  # ==========================================================================
+
+  deploy:
+
+    name: Deploy to ${{ needs.resolve-environment.outputs.environment }}
+
+    needs:
+      - resolve-environment
+
+    runs-on: ubuntu-24.04
+
+    environment:
+      name: ${{ needs.resolve-environment.outputs.environment }}
+
+    steps:
+
+      - name: Display deployment information
+
+        run: |
+          echo "=========================================="
+          echo "Deployment"
+          echo "=========================================="
+          echo "Branch      : ${{ needs.resolve-environment.outputs.branch }}"
+          echo "Environment : ${{ needs.resolve-environment.outputs.environment }}"
+          echo "=========================================="
+
+
+      # ----------------------------------------------------------------------
+      # Checkout requested branch
+      # ----------------------------------------------------------------------
+
+      - name: Checkout
+
+        uses: actions/checkout@v5
+
+        with:
+          ref: ${{ needs.resolve-environment.outputs.branch }}
+
+
+      # ----------------------------------------------------------------------
+      # Example:
+      # Environment-specific GitHub variables can now be accessed using:
+      #
+      #   vars.VARIABLE_NAME
+      #
+      # Environment-specific secrets:
+      #
+      #   secrets.SECRET_NAME
+      #
+      # These values come from the GitHub Environment selected above.
+      # ----------------------------------------------------------------------
+
+      - name: Show environment configuration
+
+        env:
+          DEPLOY_ENVIRONMENT: ${{ needs.resolve-environment.outputs.environment }}
+
+        run: |
+          echo "Deploying to GitHub Environment: $DEPLOY_ENVIRONMENT"
+
+
+      # ----------------------------------------------------------------------
+      # AWS authentication
+      #
+      # Replace AWS_ROLE_ARN with the environment variable/secret appropriate
+      # for your setup.
+      # ----------------------------------------------------------------------
+
+      - name: Configure AWS credentials
+
+        uses: aws-actions/configure-aws-credentials@v5
+
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+
+      # ----------------------------------------------------------------------
+      # Your ECS deployment steps go here
+      # ----------------------------------------------------------------------
+
+      - name: Deploy application
+
+        run: |
+          echo "Starting deployment..."
+          echo "Environment: ${{ needs.resolve-environment.outputs.environment }}"
+          echo "Branch: ${{ needs.resolve-environment.outputs.branch }}"
+
+          # Add your existing ECS deployment commands here.
