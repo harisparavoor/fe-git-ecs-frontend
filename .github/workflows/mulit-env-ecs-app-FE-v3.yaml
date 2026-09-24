@@ -1,4 +1,4 @@
-name: multi-env-ecs-app-v3
+name: multi-env-ecs-app-FE-v3
 
 on:
   workflow_dispatch:
@@ -272,6 +272,8 @@ jobs:
           check "ECS_TASK_DEFINITION_FAMILY" "${{ vars.ECS_TASK_DEFINITION_FAMILY }}"
           check "ECR_REPOSITORY"             "${{ vars.ECR_REPOSITORY }}"
           check "AWS_ROLE_ARN"               "${{ secrets.AWS_ROLE_ARN }}"
+          
+          echo "Validating common infra configuration..."
           check "CLIENTID"                   "${{ vars.REACT_APP_AZURE_AD_CLIENTID }}"
           check "AD_AUTHORITY"               "${{ vars.REACT_APP_AZURE_AD_AUTHORITY }}"
           check "APP_API_URL"                "${{ vars.REACT_APP_API_URL }}"
