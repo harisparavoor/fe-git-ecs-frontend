@@ -1,4 +1,4 @@
-name: Multi-env-portal-app-BE-deployment-v1
+name: Multi-env-portal-app-BE-v1
 
 on:
   workflow_dispatch:
@@ -428,7 +428,7 @@ jobs:
           # docker build \
           #  -t "$REPOSITORY_URI:$IMAGE_TAG" \
           #  ./Backend/
-          
+
           docker build  -t "$REPOSITORY_URI:$IMAGE_TAG" .
 
           docker push "$REPOSITORY_URI:$IMAGE_TAG"
