@@ -322,6 +322,8 @@ jobs:
 
           jq empty ./Backend/appsettings.json
 
+          cat ./Backend/appsettings.json
+
           echo "appsettings.json is valid JSON."
 
 
@@ -386,7 +388,8 @@ jobs:
 
           REPOSITORY_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}"
 
-          IMAGE_TAG="${ENVIRONMENT}-${SHORT_SHA}"
+          TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
+          IMAGE_TAG="${ENVIRONMENT}-${SHORT_SHA}-${TIMESTAMP}"
 
           echo "Repository : $REPOSITORY_URI"
           echo "Image tag  : $IMAGE_TAG"
