@@ -183,32 +183,10 @@ jobs:
       # ======================================================================
       # VALIDATE REQUIRED CONFIGURATION
       # ======================================================================
-
       - name: Validate required configuration
         shell: bash
-
         env:
           TARGET_ENV: ${{ needs.resolve-environment.outputs.environment }}
-
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
-          ECS_SERVICE: ${{ vars.ECS_SERVICE }}
-          ECS_CONTAINER_NAME: ${{ vars.ECS_CONTAINER_NAME }}
-          ECS_TASK_DEFINITION_FAMILY: ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
-          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-
-          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-
-          TENANT_ID: ${{ vars.TenantId }}
-          CLIENT_ID: ${{ vars.ClientId }}
-          SCOPES: ${{ vars.Scopes }}
-          SECRET_NAME: ${{ vars.SecretName }}
-          AICHAT: ${{ vars.AIChat }}
-          AINOTES: ${{ vars.AINotes }}
-          WEB_URL: ${{ vars.WebUrl }}
-          ALLOWED_ORIGINS: ${{ vars.AllowedOrigins }}
-          CDA_ENVIRONMENT: ${{ vars.CDAEnvironment }}
-
         run: |
           set -euo pipefail
 
@@ -226,26 +204,25 @@ jobs:
 
           echo "Validating AWS/ECS configuration..."
 
-          check "AWS_REGION" "$AWS_REGION"
-          check "ECS_CLUSTER" "$ECS_CLUSTER"
-          check "ECS_SERVICE" "$ECS_SERVICE"
+          check "AWS_REGION"  ${{ vars.AWS_REGION }}
+          check "ECS_CLUSTER" ${{ vars.ECS_CLUSTER }} 
+          check "ECS_SERVICE" ${{ vars.ECS_SERVICE }}
           check "ECS_CONTAINER_NAME" "$ECS_CONTAINER_NAME"
-          check "ECS_TASK_DEFINITION_FAMILY" "$ECS_TASK_DEFINITION_FAMILY"
-          check "ECR_REPOSITORY" "$ECR_REPOSITORY"
-          check "AWS_ROLE_ARN" "$AWS_ROLE_ARN"
+          check "ECS_TASK_DEFINITION_FAMILY" ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
+          check "ECR_REPOSITORY" ${{ vars.ECR_REPOSITORY }}
+          check "AWS_ROLE_ARN" ${{ secrets.AWS_ROLE_ARN }}
 
           echo "Validating application configuration..."
 
-          check "TenantId" "$TENANT_ID"
-          check "ClientId" "$CLIENT_ID"
-          check "Scopes" "$SCOPES"
-          check "SecretName" "$SECRET_NAME"
-          check "AIChat" "$AICHAT"
-          check "AINotes" "$AINOTES"
-          check "WebUrl" "$WEB_URL"
-          check "AllowedOrigins" "$ALLOWED_ORIGINS"
-          check "CDAEnvironment" "$CDA_ENVIRONMENT"
-
+          check "TenantId" ${{ vars.TenantId }}
+          check "ClientId" ${{ vars.ClientId }}
+          check "Scopes" ${{ vars.Scopes }}
+          check "SecretName" ${{ vars.SecretName }}
+          check "AIChat" ${{ vars.AIChat }}
+          check "AINotes" ${{ vars.AINotes }}
+          check "WebUrl" ${{ vars.WebUrl }}
+          check "AllowedOrigins"  ${{ vars.AllowedOrigins }}
+          check "CDAEnvironment"  ${{ vars.CDAEnvironment }}
           # Environment-specific configuration
 
           case "$TARGET_ENV" in
@@ -279,8 +256,7 @@ jobs:
           fi
 
           echo "All required configuration values are present."
-
-
+     
       # ======================================================================
       # UPDATE APPSETTINGS
       # ======================================================================
