@@ -1,0 +1,536 @@
+name: Multi-env-portal-app-BE-deployment-v1
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# ============================================================================
+# JOB 1
+# Resolve environment from the GitHub branch
+#
+# Branch mapping:
+#   dev       -> dev
+#   hotfix/*  -> dev
+#   sit       -> sit
+#   uat       -> uat
+#   prod      -> prod
+#
+# No branch input.
+# No environment input.
+# ============================================================================
+
+jobs:
+
+  resolve-environment:
+
+    name: Resolve deployment environment
+
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    outputs:
+      environment: ${{ steps.resolve.outputs.environment }}
+      branch: ${{ steps.resolve.outputs.branch }}
+
+    steps:
+
+      # ----------------------------------------------------------------------
+      # Resolve environment from branch
+      # ----------------------------------------------------------------------
+
+      - name: Resolve environment from branch
+        id: resolve
+        shell: bash
+
+        env:
+          BRANCH: ${{ github.ref_name }}
+
+        run: |
+          set -euo pipefail
+
+          echo "GitHub branch: $BRANCH"
+
+          case "$BRANCH" in
+
+            dev)
+              ENVIRONMENT="dev"
+              ;;
+
+            hotfix/*)
+              ENVIRONMENT="dev"
+              ;;
+
+            sit)
+              ENVIRONMENT="sit"
+              ;;
+
+            uat)
+              ENVIRONMENT="uat"
+              ;;
+
+            prod)
+              ENVIRONMENT="prod"
+              ;;
+
+            *)
+              echo "::error::Branch '$BRANCH' is not allowed for deployment."
+              echo "::error::Allowed branches:"
+              echo "::error::  dev"
+              echo "::error::  hotfix/*"
+              echo "::error::  sit"
+              echo "::error::  uat"
+              echo "::error::  prod"
+              exit 1
+              ;;
+
+          esac
+
+          echo "=========================================="
+          echo "Deployment Resolution"
+          echo "=========================================="
+          echo "Branch      : $BRANCH"
+          echo "Environment : $ENVIRONMENT"
+          echo "=========================================="
+
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
+
+
+# ============================================================================
+# JOB 2
+# Build and deploy ECS application
+# ============================================================================
+
+  deploy:
+
+    name: Deploy ECS to ${{ needs.resolve-environment.outputs.environment }}
+
+    needs:
+      - resolve-environment
+
+    runs-on: ubuntu-24.04
+
+    timeout-minutes: 30
+
+    # ------------------------------------------------------------------------
+    # GitHub Environment
+    #
+    # Environment is automatically resolved from the branch.
+    #
+    # dev       -> GitHub Environment: dev
+    # hotfix/*  -> GitHub Environment: dev
+    # sit       -> GitHub Environment: sit
+    # uat       -> GitHub Environment: uat
+    # prod      -> GitHub Environment: prod
+    #
+    # Configure required reviewers for prod under:
+    # Repository -> Settings -> Environments -> prod
+    # ------------------------------------------------------------------------
+
+    environment:
+      name: ${{ needs.resolve-environment.outputs.environment }}
+
+    # ------------------------------------------------------------------------
+    # Prevent simultaneous deployments to the same environment.
+    # ------------------------------------------------------------------------
+
+    concurrency:
+      group: ecs-deployment-${{ needs.resolve-environment.outputs.environment }}
+      cancel-in-progress: false
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+
+      # ======================================================================
+      # CHECKOUT
+      # ======================================================================
+
+     # - name: Checkout deployment branch
+     #   uses: actions/checkout@v4
+     #   with:
+     #     ref: ${{ needs.resolve-environment.outputs.branch }}
+     #     fetch-depth: 1
+
+
+      # ======================================================================
+      # DEPLOYMENT INFORMATION
+      # ======================================================================
+
+      - name: Deployment information
+        shell: bash
+
+        env:
+          BRANCH: ${{ needs.resolve-environment.outputs.branch }}
+          ENVIRONMENT: ${{ needs.resolve-environment.outputs.environment }}
+
+        run: |
+          echo "=========================================="
+          echo "Deployment Information"
+          echo "=========================================="
+          echo "Repository  : $GITHUB_REPOSITORY"
+          echo "Branch      : $BRANCH"
+          echo "Environment : $ENVIRONMENT"
+          echo "=========================================="
+
+
+      # ======================================================================
+      # VALIDATE REQUIRED CONFIGURATION
+      # ======================================================================
+      - name: Validate required configuration
+        shell: bash
+        env:
+          TARGET_ENV: ${{ needs.resolve-environment.outputs.environment }}
+        run: |
+          set -euo pipefail
+
+          missing=0
+
+          check() {
+            local name="$1"
+            local value="$2"
+
+            if [[ -z "$value" ]]; then
+              echo "::error::Missing required variable '$name' for environment '$TARGET_ENV'"
+              missing=1
+            fi
+          }
+
+          echo "Validating AWS/ECS configuration..."
+
+          check "AWS_REGION"  ${{ vars.AWS_REGION }}
+          check "ECS_CLUSTER" ${{ vars.ECS_CLUSTER }} 
+          check "ECS_SERVICE" ${{ vars.ECS_SERVICE }}
+          check "ECS_CONTAINER_NAME" "${{ vars.ECS_CONTAINER_NAME }}"
+          check "ECS_TASK_DEFINITION_FAMILY" ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
+          check "ECR_REPOSITORY" ${{ vars.ECR_REPOSITORY }}
+          check "AWS_ROLE_ARN" ${{ secrets.AWS_ROLE_ARN }}
+
+          echo "Validating application configuration..."
+
+          check "TenantId" ${{ vars.TenantId }}
+          check "ClientId" ${{ vars.ClientId }}
+          check "Scopes" ${{ vars.Scopes }}
+          check "SecretName" ${{ vars.SecretName }}
+          check "AIChat" ${{ vars.AIChat }}
+          check "AINotes" ${{ vars.AINotes }}
+          check "WebUrl" ${{ vars.WebUrl }}
+          check "AllowedOrigins"  ${{ vars.AllowedOrigins }}
+          check "CDAEnvironment"  ${{ vars.CDAEnvironment }}
+          # Environment-specific configuration
+
+          case "$TARGET_ENV" in
+
+            dev)
+              check "DEV_ENV_SPECIFIC_VALUE" "${{ vars.DEV_ENV_SPECIFIC_VALUE }}"
+              ;;
+
+            sit)
+              check "SIT_ENV_SPECIFIC_VALUE" "${{ vars.SIT_ENV_SPECIFIC_VALUE }}"
+              ;;
+
+            uat)
+              check "UAT_ENV_SPECIFIC_VALUE" "${{ vars.UAT_ENV_SPECIFIC_VALUE }}"
+              ;;
+
+            prod)
+              check "PROD_ENV_SPECIFIC_VALUE" "${{ vars.PROD_ENV_SPECIFIC_VALUE }}"
+              ;;
+
+            *)
+              echo "::error::Unknown environment '$TARGET_ENV'"
+              missing=1
+              ;;
+
+          esac
+
+          if [[ "$missing" -ne 0 ]]; then
+            echo "::error::Required configuration validation failed."
+            exit 1
+          fi
+
+          echo "All required configuration values are present."
+
+
+      # ======================================================================
+      # Checkout selected branch
+      # ======================================================================
+      - name: Checkout
+        uses: actions/checkout@v4
+
+        with:
+          ref: ${{ needs.resolve-environment.outputs.branch }}
+          fetch-depth: 0
+
+      # Optional sanity build of the app before containerizing.
+      # Remove this step if your Docker build already handles install/build.
+      # -----------------------------------------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            echo "WARNING: No package-lock.json/npm-shrinkwrap.json found."
+            echo "Falling back to 'npm install'. Commit a lock file for reproducible, faster CI builds."
+            npm install
+          fi
+     
+      # ======================================================================
+      # UPDATE APPSETTINGS
+      # ======================================================================
+
+      - name: Update appsettings.json
+        shell: bash
+
+        env:
+          TENANT_ID: ${{ vars.TenantId }}
+          CLIENT_ID: ${{ vars.ClientId }}
+          SCOPES: ${{ vars.Scopes }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          SECRET_NAME: ${{ vars.SecretName }}
+          AICHAT: ${{ vars.AIChat }}
+          AINOTES: ${{ vars.AINotes }}
+          WEB_URL: ${{ vars.WebUrl }}
+          ALLOWED_ORIGINS: ${{ vars.AllowedOrigins }}
+          CDA_ENVIRONMENT: ${{ vars.CDAEnvironment }}
+
+        run: |
+          set -euo pipefail
+
+          test -f ./Backend/appsettings.json
+
+          jq \
+            --arg TenantId "$TENANT_ID" \
+            --arg ClientId "$CLIENT_ID" \
+            --arg Scopes "$SCOPES" \
+            --arg Region "$AWS_REGION" \
+            --arg SecretName "$SECRET_NAME" \
+            --arg AIChat "$AICHAT" \
+            --arg AINotes "$AINOTES" \
+            --arg WebUrl "$WEB_URL" \
+            --arg AllowedOrigins "$ALLOWED_ORIGINS" \
+            --arg CDAEnvironment "$CDA_ENVIRONMENT" \
+            '
+            .EntraId.TenantId = $TenantId
+            | .EntraId.ClientId = $ClientId
+            | .EntraId.Scopes = $Scopes
+            | .AWS.Region = $Region
+            | .AWS.SecretName = $SecretName
+            | .Navigation.AIChat = $AIChat
+            | .Navigation.AINotes = $AINotes
+            | .BannerOptions.Banners[].WebUrl = $WebUrl
+            | .AllowedOrigins = $AllowedOrigins
+            | .CDAEnvironment = $CDAEnvironment
+            ' \
+            ./Backend/appsettings.json \
+            > ./Backend/appsettings.tmp.json
+
+          mv ./Backend/appsettings.tmp.json ./Backend/appsettings.json
+
+
+      # ======================================================================
+      # VERIFY APPSETTINGS
+      # ======================================================================
+
+      - name: Verify appsettings.json
+        shell: bash
+
+        run: |
+          set -euo pipefail
+
+          jq empty ./Backend/appsettings.json
+
+          cat ./Backend/appsettings.json
+
+          echo "appsettings.json is valid JSON."
+
+
+      # ======================================================================
+      # GET COMMIT HASH
+      # ======================================================================
+
+      - name: Get commit hash
+        id: commit
+        shell: bash
+
+        run: |
+          set -euo pipefail
+
+          COMMIT_SHA="$(git rev-parse HEAD)"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+
+          echo "commit_sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+
+          echo "Commit SHA : $COMMIT_SHA"
+          echo "Short SHA  : $SHORT_SHA"
+
+      # ======================================================================
+      # CONFIGURE AWS CREDENTIALS USING GITHUB OIDC
+      # ======================================================================
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+
+      # ======================================================================
+      # LOGIN TO AMAZON ECR
+      # ======================================================================
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+
+      # ======================================================================
+      # BUILD AND PUSH DOCKER IMAGE
+      # ======================================================================
+
+      - name: Build and push Docker image
+        id: build-image
+        shell: bash
+
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          ENVIRONMENT: ${{ needs.resolve-environment.outputs.environment }}
+          SHORT_SHA: ${{ steps.commit.outputs.short_sha }}
+
+        run: |
+          set -euo pipefail
+
+          REPOSITORY_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}"
+
+          TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
+          IMAGE_TAG="${ENVIRONMENT}-${SHORT_SHA}-${TIMESTAMP}"
+
+          echo "Repository : $REPOSITORY_URI"
+          echo "Image tag  : $IMAGE_TAG"
+
+          # Build backend image
+          docker build \
+            -t "$REPOSITORY_URI:$IMAGE_TAG" \
+            ./Backend/
+
+          # Push image to ECR
+          docker push "$REPOSITORY_URI:$IMAGE_TAG"
+
+          # Get immutable ECR digest
+          IMAGE_DIGEST="$(
+            aws ecr describe-images \
+              --repository-name "$ECR_REPOSITORY" \
+              --image-ids imageTag="$IMAGE_TAG" \
+              --query 'imageDetails[0].imageDigest' \
+              --output text
+          )"
+
+          if [[ -z "$IMAGE_DIGEST" || "$IMAGE_DIGEST" == "None" ]]; then
+            echo "::error::Unable to resolve ECR image digest."
+            exit 1
+          fi
+
+          IMAGE_URI="${REPOSITORY_URI}@${IMAGE_DIGEST}"
+
+          echo "Immutable image URI:"
+          echo "$IMAGE_URI"
+
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "image_digest=$IMAGE_DIGEST" >> "$GITHUB_OUTPUT"
+          echo "image_uri=$IMAGE_URI" >> "$GITHUB_OUTPUT"
+
+
+      # ======================================================================
+      # DOWNLOAD CURRENT ECS TASK DEFINITION
+      # ======================================================================
+
+      - name: Download ECS task definition
+        shell: bash
+
+        env:
+          ECS_TASK_DEFINITION_FAMILY: ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
+
+        run: |
+          set -euo pipefail
+
+          aws ecs describe-task-definition \
+            --task-definition "$ECS_TASK_DEFINITION_FAMILY" \
+            --query "taskDefinition" \
+            --output json \
+            > task-definition.json
+
+          test -s task-definition.json
+
+          echo "Task definition downloaded successfully."
+
+
+      # ======================================================================
+      # UPDATE CONTAINER IMAGE IN TASK DEFINITION
+      # ======================================================================
+
+      - name: Update ECS container image
+        id: render-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ vars.ECS_CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image_uri }}
+
+
+      # ======================================================================
+      # DEPLOY TO ECS
+      # ======================================================================
+
+      - name: Deploy ECS service
+        id: deploy-ecs
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+          cluster: ${{ vars.ECS_CLUSTER }}
+          service: ${{ vars.ECS_SERVICE }}
+          wait-for-service-stability: true
+
+
+      # ======================================================================
+      # DEPLOYMENT SUMMARY
+      # ======================================================================
+
+      - name: Deployment summary
+        shell: bash
+
+        env:
+          BRANCH: ${{ needs.resolve-environment.outputs.branch }}
+          ENVIRONMENT: ${{ needs.resolve-environment.outputs.environment }}
+          IMAGE_TAG: ${{ steps.build-image.outputs.image_tag }}
+          IMAGE_DIGEST: ${{ steps.build-image.outputs.image_digest }}
+          COMMIT_SHA: ${{ steps.commit.outputs.commit_sha }}
+
+        run: |
+          {
+            echo "## ECS Deployment"
+            echo ""
+            echo "- Environment: \`$ENVIRONMENT\`"
+            echo "- Branch: \`$BRANCH\`"
+            echo "- Commit: \`$COMMIT_SHA\`"
+            echo "- Image tag: \`$IMAGE_TAG\`"
+            echo "- Image digest: \`$IMAGE_DIGEST\`"
+            echo "- Deployment: **successful**"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,4 +1,4 @@
-name: multi-env-ecs-app-v3
+name: multi-env-ecs-app-FE-v3
 
 on:
   workflow_dispatch:
@@ -451,17 +451,20 @@ jobs:
       # Get source commit hash
       # ======================================================================
       - name: Get commit hash
-        id: get-commit-hash
+        id: commit
         shell: bash
 
         run: |
           set -euo pipefail
 
-          COMMIT_HASH="$(git rev-parse --short=7 HEAD)"
+          COMMIT_SHA="$(git rev-parse HEAD)"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
 
-          echo "commit-hash=$COMMIT_HASH" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
 
-          echo "Source commit: $COMMIT_HASH"
+          echo "Commit SHA : $COMMIT_SHA"
+          echo "Short SHA  : $SHORT_SHA"
 
       # Look up the ALB's live DNS name (created by Terraform) and build
       # REACT_APP_BACKEND_URL from it. This can't be a static repo Variable
@@ -510,17 +513,16 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-
           ENVIRONMENT: ${{ needs.resolve-environment.outputs.environment }}
-
-          COMMIT_HASH: ${{ steps.get-commit-hash.outputs.commit-hash }}
+          SHORT_SHA: ${{ steps.commit.outputs.short_sha }}
 
         run: |
           set -euo pipefail
 
           REPOSITORY_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}"
 
-          IMAGE_TAG="${ENVIRONMENT}-${COMMIT_HASH}"
+          TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
+          IMAGE_TAG="${ENVIRONMENT}-${SHORT_SHA}-${TIMESTAMP}"
 
           echo "Repository : $REPOSITORY_URI"
           echo "Image tag  : $IMAGE_TAG"
