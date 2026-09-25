@@ -425,11 +425,12 @@ jobs:
           echo "Image tag  : $IMAGE_TAG"
 
           # Build backend image
-          docker build \
-            -t "$REPOSITORY_URI:$IMAGE_TAG" \
-            ./Backend/
+          # docker build \
+          #  -t "$REPOSITORY_URI:$IMAGE_TAG" \
+          #  ./Backend/
+          
+          docker build  -t "$REPOSITORY_URI:$IMAGE_TAG" .
 
-          # Push image to ECR
           docker push "$REPOSITORY_URI:$IMAGE_TAG"
 
           # Get immutable ECR digest
