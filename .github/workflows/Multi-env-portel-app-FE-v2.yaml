@@ -413,10 +413,10 @@ jobs:
           echo "Repository : $REPOSITORY_URI"
           echo "Image tag  : $IMAGE_TAG"
 
-          docker build \
-          -t "$REPOSITORY_URI:$IMAGE_TAG" \
-            ./frontend/
-
+          #docker build \
+          #-t "$REPOSITORY_URI:$IMAGE_TAG" \
+           # ./frontend/
+          docker build  -t "$REPOSITORY_URI:$IMAGE_TAG" .
           docker push "$REPOSITORY_URI:$IMAGE_TAG"
 
           # Resolve the immutable ECR digest.
