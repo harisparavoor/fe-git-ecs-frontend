@@ -208,8 +208,7 @@ jobs:
           check "AD_API_SCOPE"               "${{ vars.REACT_APP_AZURE_AD_API_SCOPE }}"
           check "CHAT_ORIGIN"                "${{ vars.REACT_APP_CHAT_ORIGIN }}"
           check "NOTES_ORIGIN"               "${{ vars.REACT_APP_NOTES_ORIGIN }}"
-          check  db_name                      "${{ vars.db_name }}"
-     
+               
           # Environment-specific configuration.
           case "$TARGET_ENV" in
 
