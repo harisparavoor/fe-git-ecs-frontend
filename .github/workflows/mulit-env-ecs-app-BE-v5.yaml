@@ -152,11 +152,11 @@ jobs:
       # CHECKOUT
       # ======================================================================
 
-      - name: Checkout deployment branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.resolve-environment.outputs.branch }}
-          fetch-depth: 1
+     # - name: Checkout deployment branch
+     #   uses: actions/checkout@v4
+     #   with:
+     #     ref: ${{ needs.resolve-environment.outputs.branch }}
+     #     fetch-depth: 1
 
 
       # ======================================================================
@@ -183,32 +183,10 @@ jobs:
       # ======================================================================
       # VALIDATE REQUIRED CONFIGURATION
       # ======================================================================
-
       - name: Validate required configuration
         shell: bash
-
         env:
           TARGET_ENV: ${{ needs.resolve-environment.outputs.environment }}
-
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
-          ECS_SERVICE: ${{ vars.ECS_SERVICE }}
-          ECS_CONTAINER_NAME: ${{ vars.ECS_CONTAINER_NAME }}
-          ECS_TASK_DEFINITION_FAMILY: ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
-          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-
-          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-
-          TENANT_ID: ${{ vars.TenantId }}
-          CLIENT_ID: ${{ vars.ClientId }}
-          SCOPES: ${{ vars.Scopes }}
-          SECRET_NAME: ${{ vars.SecretName }}
-          AICHAT: ${{ vars.AIChat }}
-          AINOTES: ${{ vars.AINotes }}
-          WEB_URL: ${{ vars.WebUrl }}
-          ALLOWED_ORIGINS: ${{ vars.AllowedOrigins }}
-          CDA_ENVIRONMENT: ${{ vars.CDAEnvironment }}
-
         run: |
           set -euo pipefail
 
@@ -226,26 +204,25 @@ jobs:
 
           echo "Validating AWS/ECS configuration..."
 
-          check "AWS_REGION" "$AWS_REGION"
-          check "ECS_CLUSTER" "$ECS_CLUSTER"
-          check "ECS_SERVICE" "$ECS_SERVICE"
-          check "ECS_CONTAINER_NAME" "$ECS_CONTAINER_NAME"
-          check "ECS_TASK_DEFINITION_FAMILY" "$ECS_TASK_DEFINITION_FAMILY"
-          check "ECR_REPOSITORY" "$ECR_REPOSITORY"
-          check "AWS_ROLE_ARN" "$AWS_ROLE_ARN"
+          check "AWS_REGION"  ${{ vars.AWS_REGION }}
+          check "ECS_CLUSTER" ${{ vars.ECS_CLUSTER }} 
+          check "ECS_SERVICE" ${{ vars.ECS_SERVICE }}
+          check "ECS_CONTAINER_NAME" "${{ vars.ECS_CONTAINER_NAME }}"
+          check "ECS_TASK_DEFINITION_FAMILY" ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
+          check "ECR_REPOSITORY" ${{ vars.ECR_REPOSITORY }}
+          check "AWS_ROLE_ARN" ${{ secrets.AWS_ROLE_ARN }}
 
           echo "Validating application configuration..."
 
-          check "TenantId" "$TENANT_ID"
-          check "ClientId" "$CLIENT_ID"
-          check "Scopes" "$SCOPES"
-          check "SecretName" "$SECRET_NAME"
-          check "AIChat" "$AICHAT"
-          check "AINotes" "$AINOTES"
-          check "WebUrl" "$WEB_URL"
-          check "AllowedOrigins" "$ALLOWED_ORIGINS"
-          check "CDAEnvironment" "$CDA_ENVIRONMENT"
-
+          check "TenantId" ${{ vars.TenantId }}
+          check "ClientId" ${{ vars.ClientId }}
+          check "Scopes" ${{ vars.Scopes }}
+          check "SecretName" ${{ vars.SecretName }}
+          check "AIChat" ${{ vars.AIChat }}
+          check "AINotes" ${{ vars.AINotes }}
+          check "WebUrl" ${{ vars.WebUrl }}
+          check "AllowedOrigins"  ${{ vars.AllowedOrigins }}
+          check "CDAEnvironment"  ${{ vars.CDAEnvironment }}
           # Environment-specific configuration
 
           case "$TARGET_ENV" in
@@ -281,6 +258,36 @@ jobs:
           echo "All required configuration values are present."
 
 
+      # ======================================================================
+      # Checkout selected branch
+      # ======================================================================
+      - name: Checkout
+        uses: actions/checkout@v4
+
+        with:
+          ref: ${{ needs.resolve-environment.outputs.branch }}
+          fetch-depth: 0
+
+      # Optional sanity build of the app before containerizing.
+      # Remove this step if your Docker build already handles install/build.
+      # -----------------------------------------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            echo "WARNING: No package-lock.json/npm-shrinkwrap.json found."
+            echo "Falling back to 'npm install'. Commit a lock file for reproducible, faster CI builds."
+            npm install
+          fi
+     
       # ======================================================================
       # UPDATE APPSETTINGS
       # ======================================================================
@@ -346,6 +353,8 @@ jobs:
 
           jq empty ./Backend/appsettings.json
 
+          cat ./Backend/appsettings.json
+
           echo "appsettings.json is valid JSON."
 
 
@@ -368,7 +377,6 @@ jobs:
 
           echo "Commit SHA : $COMMIT_SHA"
           echo "Short SHA  : $SHORT_SHA"
-
 
       # ======================================================================
       # CONFIGURE AWS CREDENTIALS USING GITHUB OIDC
@@ -410,7 +418,8 @@ jobs:
 
           REPOSITORY_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}"
 
-          IMAGE_TAG="${ENVIRONMENT}-${SHORT_SHA}"
+          TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
+          IMAGE_TAG="${ENVIRONMENT}-${SHORT_SHA}-${TIMESTAMP}"
 
           echo "Repository : $REPOSITORY_URI"
           echo "Image tag  : $IMAGE_TAG"
