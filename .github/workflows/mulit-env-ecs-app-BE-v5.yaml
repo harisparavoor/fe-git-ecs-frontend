@@ -152,11 +152,11 @@ jobs:
       # CHECKOUT
       # ======================================================================
 
-      - name: Checkout deployment branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.resolve-environment.outputs.branch }}
-          fetch-depth: 1
+     # - name: Checkout deployment branch
+     #   uses: actions/checkout@v4
+     #   with:
+     #     ref: ${{ needs.resolve-environment.outputs.branch }}
+     #     fetch-depth: 1
 
 
       # ======================================================================
@@ -256,6 +256,37 @@ jobs:
           fi
 
           echo "All required configuration values are present."
+
+
+      # ======================================================================
+      # Checkout selected branch
+      # ======================================================================
+      - name: Checkout
+        uses: actions/checkout@v4
+
+        with:
+          ref: ${{ needs.resolve-environment.outputs.branch }}
+          fetch-depth: 0
+
+      # Optional sanity build of the app before containerizing.
+      # Remove this step if your Docker build already handles install/build.
+      # -----------------------------------------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            echo "WARNING: No package-lock.json/npm-shrinkwrap.json found."
+            echo "Falling back to 'npm install'. Commit a lock file for reproducible, faster CI builds."
+            npm install
+          fi
      
       # ======================================================================
       # UPDATE APPSETTINGS
@@ -346,7 +377,6 @@ jobs:
 
           echo "Commit SHA : $COMMIT_SHA"
           echo "Short SHA  : $SHORT_SHA"
-
 
       # ======================================================================
       # CONFIGURE AWS CREDENTIALS USING GITHUB OIDC
