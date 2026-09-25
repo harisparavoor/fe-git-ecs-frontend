@@ -207,7 +207,7 @@ jobs:
           check "AWS_REGION"  ${{ vars.AWS_REGION }}
           check "ECS_CLUSTER" ${{ vars.ECS_CLUSTER }} 
           check "ECS_SERVICE" ${{ vars.ECS_SERVICE }}
-          check "ECS_CONTAINER_NAME" "$ECS_CONTAINER_NAME"
+          check "ECS_CONTAINER_NAME" "${{ vars.ECS_CONTAINER_NAME }}"
           check "ECS_TASK_DEFINITION_FAMILY" ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
           check "ECR_REPOSITORY" ${{ vars.ECR_REPOSITORY }}
           check "AWS_ROLE_ARN" ${{ secrets.AWS_ROLE_ARN }}
