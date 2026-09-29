@@ -280,7 +280,7 @@ jobs:
           test -f ./frontend/.env
           
           envsubst \
-            '${ClientId} ${TenantId} ${Scopes} ${Portal_Origin} ${Api_Base_Uri} ${Portal_App_BE_Uri} ${AWS_REGION} \
+            '${ClientId} ${TenantId} ${Scopes} ${Portal_Origin} ${Api_Base_Uri} ${Portal_App_BE_Uri} ${AWS_REGION}' \
             < ./frontend/.env \
             > /tmp/frontend.env
 
