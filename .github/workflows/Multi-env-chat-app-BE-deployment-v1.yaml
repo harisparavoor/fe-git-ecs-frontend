@@ -329,7 +329,7 @@ jobs:
             | .Frontend.AadClientId = $FrontendClientId
             | .AWS.TranscribeRole = $TranscribeRoleName
             | .Hospitals.HospitalNames = $HospitalNames 
-            | .Prompts.SystemDescription.SharepointSourceUri= $SharepointSourceUri
+            | .Prompts.SystemDescription.SharepointSourceUri= $SHAREPOINT_SOURCE_URL
             | .CDAEnvironment = $CDAEnvironment
             ' \
             ./Backend/webapi/appsettings.json \
