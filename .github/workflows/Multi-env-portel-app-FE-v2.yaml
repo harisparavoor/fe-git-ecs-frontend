@@ -405,19 +405,25 @@ jobs:
           set -euo pipefail
 
           REPOSITORY_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}"
-          IMAGE_TAG="${SHORT_SHA}-latest"
+          IMAGE_TAG="${SHORT_SHA}"
 
           echo "Repository : $REPOSITORY_URI"
-          echo "Image tag  : $IMAGE_TAG"
+          echo "Image tag  : $IMAGE_TAG, latest"
 
-          #docker build \
-          #-t "$REPOSITORY_URI:$IMAGE_TAG" \
-          #  ./frontend/
+          # Build backend image
+          # docker build \
+          #  -t "$REPOSITORY_URI:$IMAGE_TAG" \
+          #  -t "$REPOSITORY_URI:latest" \
+          #  ./Backend/
 
-          docker build  -t "$REPOSITORY_URI:$IMAGE_TAG" .
-          docker tag "$REPOSITORY_URI:latest" "$REPOSITORY_URI:$IMAGE_TAG"
-          docker push "$REPOSITORY_URI:latest"
+          # Build 
+          docker build \
+            -t "$REPOSITORY_URI:$IMAGE_TAG" \
+            -t "$REPOSITORY_URI:latest" .
+
+          # Push the commit tag first, then move "latest" to this image
           docker push "$REPOSITORY_URI:$IMAGE_TAG"
+          docker push "$REPOSITORY_URI:latest"
 
           # Resolve the immutable ECR digest.
           IMAGE_DIGEST="$(
