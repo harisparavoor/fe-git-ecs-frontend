@@ -399,24 +399,21 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-          ENVIRONMENT: ${{ needs.resolve-environment.outputs.environment }}
           SHORT_SHA: ${{ steps.commit.outputs.short_sha }}
           
         run: |
           set -euo pipefail
 
           REPOSITORY_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}"
-
-          TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
-          IMAGE_TAG="${ENVIRONMENT}-${SHORT_SHA}-${TIMESTAMP}"
+          IMAGE_TAG="${SHORT_SHA}-latest"
 
           echo "Repository : $REPOSITORY_URI"
           echo "Image tag  : $IMAGE_TAG"
 
-          #docker build \
-          #-t "$REPOSITORY_URI:$IMAGE_TAG" \
-           # ./frontend/
-          docker build  -t "$REPOSITORY_URI:$IMAGE_TAG" .
+          docker build \
+          -t "$REPOSITORY_URI:$IMAGE_TAG" \
+            ./frontend/
+
           docker push "$REPOSITORY_URI:$IMAGE_TAG"
 
           # Resolve the immutable ECR digest.

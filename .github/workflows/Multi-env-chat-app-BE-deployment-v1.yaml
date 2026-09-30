@@ -1,4 +1,4 @@
-name: Multi-env-portal-app-BE-v1
+name: Multi-env-chat-app-BE-deployment-v1
 
 on:
   workflow_dispatch:
@@ -149,17 +149,6 @@ jobs:
     steps:
 
       # ======================================================================
-      # CHECKOUT
-      # ======================================================================
-
-     # - name: Checkout deployment branch
-     #   uses: actions/checkout@v4
-     #   with:
-     #     ref: ${{ needs.resolve-environment.outputs.branch }}
-     #     fetch-depth: 1
-
-
-      # ======================================================================
       # DEPLOYMENT INFORMATION
       # ======================================================================
 
@@ -204,50 +193,55 @@ jobs:
 
           echo "Validating AWS/ECS configuration..."
 
-          check "AWS_REGION"  "${{ vars.AWS_REGION }}"
-          check "ECS_CLUSTER" "${{ vars.ECS_CLUSTER }}"
-          check "ECS_SERVICE" "${{ vars.ECS_SERVICE }}"
-          check "ECS_CONTAINER_NAME" "${{ vars.ECS_CONTAINER_NAME }}"
-          check "ECS_TASK_DEFINITION_FAMILY" ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
-          check "ECR_REPOSITORY" "${{ vars.ECR_REPOSITORY }}"
-          check "AWS_ROLE_ARN" "${{ secrets.AWS_ROLE_ARN }}"
-
+          check "AWS_REGION"          ${{ vars.AWS_REGION }}
+          check "ECS_CLUSTER"         ${{ vars.ECS_CLUSTER }} 
+          check "ECS_SERVICE"         ${{ vars.ECS_SERVICE }}
+          check "ECS_CONTAINER_NAME"  "${{ vars.ECS_CONTAINER_NAME }}"
+          check "ECS_TASK_DEFINITION_FAMILY"  ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
+          check "ECR_REPOSITORY"     ${{ vars.ECR_REPOSITORY }}
+          check "AWS_ROLE_ARN"       ${{ secrets.AWS_ROLE_ARN }}
+          
           echo "Validating application configuration..."
 
-          check "TenantId" ${{ vars.TenantId }}
-          check "ClientId" ${{ vars.ClientId }}
-          check "Scopes" ${{ vars.Scopes }}
-          check "SecretName" ${{ vars.SecretName }}
-          check "AIChat" ${{ vars.AIChat }}
-          check "AINotes" ${{ vars.AINotes }}
-          check "WebUrl" ${{ vars.WebUrl }}
-          check "AllowedOrigins"  ${{ vars.AllowedOrigins }}
-          check "CDAEnvironment"  ${{ vars.CDAEnvironment }}
+          check "TenantId"              "${{ vars.TenantId }}"
+          check "ClientId"              "${{ vars.ClientId }}"
+          check "Scopes"                "${{ vars.Scopes }}"
+          check "SecretName"            "${{ vars.SecretName }}"
+          check "AllowedOrigin"         "${{ vars.AllowedOrigin }}"
+          check "GuardrailIdentifier"   "${{ vars.GuardrailIdentifier }}"
+          check "GuardrailVersion"      "${{ vars.GuardrailVersion }}"
+          check "OpenSearchEndpoint"    "${{ vars.OpenSearchEndpoint }}"
+          check "EmbeddingModelId"      "${{ vars.EmbeddingModelId }}"
+          check "TextModelId"           "${{ vars.TextModelId }}"
+          check "TextModelVersion"      "${{ vars.TextModelVersion }}"
+          check "OpenSearchIndexName"   "${{ vars.OpenSearchIndexName }}"
+          check "LibraryFilterKeyName"  "${{ vars.LibraryFilterKeyName }}"
+          check "FrontendClientId"      "${{ vars.FrontendClientId }}"
+          check "TranscribeRoleName"    "${{ vars.TranscribeRoleName }}"
+          check "CDAEnvironment"        "${{ vars.CDAEnvironment }}"
+          check "HospitalNames"         "${{ vars.HospitalNames }}"
+          check "SharepointSourceUri"   "${{ vars.SharepointSourceUri }}"
+          
+
+
           # Environment-specific configuration
-
           case "$TARGET_ENV" in
-
             dev)
               check "DEV_ENV_SPECIFIC_VALUE" "${{ vars.DEV_ENV_SPECIFIC_VALUE }}"
               ;;
-
             sit)
               check "SIT_ENV_SPECIFIC_VALUE" "${{ vars.SIT_ENV_SPECIFIC_VALUE }}"
               ;;
-
             uat)
               check "UAT_ENV_SPECIFIC_VALUE" "${{ vars.UAT_ENV_SPECIFIC_VALUE }}"
               ;;
-
             prod)
               check "PROD_ENV_SPECIFIC_VALUE" "${{ vars.PROD_ENV_SPECIFIC_VALUE }}"
               ;;
-
             *)
               echo "::error::Unknown environment '$TARGET_ENV'"
               missing=1
               ;;
-
           esac
 
           if [[ "$missing" -ne 0 ]]; then
@@ -257,89 +251,91 @@ jobs:
 
           echo "All required configuration values are present."
 
-
       # ======================================================================
       # Checkout selected branch
       # ======================================================================
       - name: Checkout
         uses: actions/checkout@v4
-
         with:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
 
-      # Optional sanity build of the app before containerizing.
-      # Remove this step if your Docker build already handles install/build.
-      # -----------------------------------------------------------------
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            echo "WARNING: No package-lock.json/npm-shrinkwrap.json found."
-            echo "Falling back to 'npm install'. Commit a lock file for reproducible, faster CI builds."
-            npm install
-          fi
-     
       # ======================================================================
       # UPDATE APPSETTINGS
       # ======================================================================
-
       - name: Update appsettings.json
         shell: bash
-
         env:
-          TENANT_ID: ${{ vars.TenantId }}
-          CLIENT_ID: ${{ vars.ClientId }}
-          SCOPES: ${{ vars.Scopes }}
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          SECRET_NAME: ${{ vars.SecretName }}
-          AICHAT: ${{ vars.AIChat }}
-          AINOTES: ${{ vars.AINotes }}
-          WEB_URL: ${{ vars.WebUrl }}
-          ALLOWED_ORIGINS: ${{ vars.AllowedOrigins }}
-          CDA_ENVIRONMENT: ${{ vars.CDAEnvironment }}
+          TENANT_ID:               ${{ vars.TenantId }}
+          CLIENT_ID:               ${{ vars.ClientId }}
+          SCOPES:                  ${{ vars.Scopes }}
+          AWS_REGION:              ${{ vars.AWS_REGION }}
+          SECRETNAME:              ${{ vars.SecretName }}
+          ALLOWEDORIGIN:           ${{ vars.AllowedOrigin }}
+          GUARDRAIL_IDENTIFIER:    ${{ vars.GuardrailIdentifier }}
+          GUARDRAIL_VERSION:       ${{ vars.GuardrailVersion }}
+          OPENSEARCH_ENDPOINT:     ${{ vars.OpenSearchEndpoint }}
+          EMBEDDING_MODEL_ID:      ${{ vars.EmbeddingModelId }}
+          TEXT_MODEL_ID:           ${{ vars.TextModelId }}
+          TEXT_MODEL_VERSION:      ${{ vars.TextModelVersion }}
+          OPENSEARCH_INDEX_NAME:   ${{ vars.OpenSearchIndexName }}
+          LIBRARY_FILTER_KEY_NAME: ${{ vars.LibraryFilterKeyName }}
+          FRONTEND_CLIENT_ID:      ${{ vars.FrontendClientId }}
+          TRANSCRIBE_ROLE_NAME:    ${{ vars.TranscribeRoleName }}
+          CDA_ENVIRONMENT:         ${{ vars.CDAEnvironment }}
+          HOSPITAL_NAMES:          ${{ vars.HospitalNames }}
+          SHAREPOINT_SOURCE_URL:   ${{ vars.SharepointSourceUri }}
 
         run: |
           set -euo pipefail
 
-          test -f ./Backend/appsettings.json
+          test -f ./Backend/webapi/appsettings.json
 
           jq \
             --arg TenantId "$TENANT_ID" \
             --arg ClientId "$CLIENT_ID" \
             --arg Scopes "$SCOPES" \
             --arg Region "$AWS_REGION" \
-            --arg SecretName "$SECRET_NAME" \
-            --arg AIChat "$AICHAT" \
-            --arg AINotes "$AINOTES" \
-            --arg WebUrl "$WEB_URL" \
-            --arg AllowedOrigins "$ALLOWED_ORIGINS" \
+            --arg SecretName "$SECRETNAME" \
+            --arg AllowedOrigins "$ALLOWEDORIGIN" \
+            --arg GuardRailIdentifier "$GUARDRAIL_IDENTIFIER" \
+            --arg GuardRailVersion "$GUARDRAIL_VERSION" \
+            --arg OpenSearchEndpoint "$OPENSEARCH_ENDPOINT" \
+            --arg EmbeddingModelId "$EMBEDDING_MODEL_ID" \
+            --arg TextModelId "$TEXT_MODEL_ID" \
+            --arg TextModelVersion "$TEXT_MODEL_VERSION" \
+            --arg OpenSearchIndexName "$OPENSEARCH_INDEX_NAME" \
+            --arg LibraryFilterKeyName "$LIBRARY_FILTER_KEY_NAME" \
+            --arg FrontendClientId "$FRONTEND_CLIENT_ID" \
+            --arg TranscribeRoleName "$TRANSCRIBE_ROLE_NAME" \
             --arg CDAEnvironment "$CDA_ENVIRONMENT" \
+            --arg HospitalNames "$HOSPITAL_NAMES" \
+            --arg SharepointUrl "$SHAREPOINT_SOURCE_URL" \
             '
-            .EntraId.TenantId = $TenantId
-            | .EntraId.ClientId = $ClientId
-            | .EntraId.Scopes = $Scopes
+            .Authentication.AzureAd.TenantId = $TenantId
+            | .Authentication.AzureAd.ClientId = $ClientId
+            | .Authentication.AzureAd.Scopes = $Scopes
             | .AWS.Region = $Region
             | .AWS.SecretName = $SecretName
-            | .Navigation.AIChat = $AIChat
-            | .Navigation.AINotes = $AINotes
-            | .BannerOptions.Banners[].WebUrl = $WebUrl
-            | .AllowedOrigins = $AllowedOrigins
+            | .AllowedOrigins = $AllowedOrigin
+            | .KernelMemory.Services.GuardRail.Identifier = $GuardRailIdentifier
+            | .KernelMemory.Services.GuardRail.Version = $GuardRailVersion
+            | .OpenSearch.Endpoint = $OpenSearchEndpoint
+            | .OpenSearch.EmbeddingModelId = $EmbeddingModelId
+            | .OpenSearch.TextModelId = $TextModelId
+            | .OpenSearch.TextModelVersion = $TextModelVersion
+            | .OpenSearch.IndexName = $OpenSearchIndexName
+            | .OpenSearch.LibraryFilterKeyName = $LibraryFilterKeyName
+            | .Frontend.AadClientId = $FrontendClientId
+            | .AWS.TranscribeRole = $TranscribeRoleName
+            | .Hospitals.HospitalNames = $HospitalNames 
+            | .Prompts.SystemDescription= $_SHAREPOINT_SOURCE_URL_
             | .CDAEnvironment = $CDAEnvironment
             ' \
-            ./Backend/appsettings.json \
-            > ./Backend/appsettings.tmp.json
+            ./Backend/webapi/appsettings.json \
+            > ./Backend/webapi/appsettings.tmp.json
 
-          mv ./Backend/appsettings.tmp.json ./Backend/appsettings.json
-
+          mv ./Backend/webapi/appsettings.tmp.json ./Backend/webapi/appsettings.json
 
       # ======================================================================
       # VERIFY APPSETTINGS
@@ -351,9 +347,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          jq empty ./Backend/appsettings.json
+          jq empty ./Backend/webapi/appsettings.json
 
-          cat ./Backend/appsettings.json
+          cat ./Backend/webapi/appsettings.json
 
           echo "appsettings.json is valid JSON."
 
@@ -402,7 +398,6 @@ jobs:
       # ======================================================================
       # BUILD AND PUSH DOCKER IMAGE
       # ======================================================================
-
       - name: Build, tag and push image to Amazon ECR
         id: build-image
         shell: bash
@@ -421,13 +416,11 @@ jobs:
           echo "Repository : $REPOSITORY_URI"
           echo "Image tag  : $IMAGE_TAG"
 
-          # Build backend image
-          # docker build \
-          #  -t "$REPOSITORY_URI:$IMAGE_TAG" \
-          #  ./Backend/
-
-          docker build  -t "$REPOSITORY_URI:$IMAGE_TAG" .
-
+          #Build backend image
+          docker build \
+           -t "$REPOSITORY_URI:$IMAGE_TAG" \
+           ./Backend/
+          
           docker push "$REPOSITORY_URI:$IMAGE_TAG"
 
           # Get immutable ECR digest
