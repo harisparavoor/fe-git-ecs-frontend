@@ -401,7 +401,11 @@ jobs:
       - name: Build, tag and push image to Amazon ECR
         id: build-image
         shell: bash
-
+        
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          SHORT_SHA: ${{ steps.commit.outputs.short_sha }}
         run: |
           set -euo pipefail
 
