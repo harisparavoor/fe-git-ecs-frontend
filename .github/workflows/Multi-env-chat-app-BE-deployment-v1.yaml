@@ -317,7 +317,7 @@ jobs:
             | .Authentication.AzureAd.Scopes = $Scopes
             | .AWS.Region = $Region
             | .AWS.SecretName = $SecretName
-            | .AllowedOrigins = $AllowedOrigin
+            | .AllowedOrigins = $AllowedOrigins
             | .KernelMemory.Services.GuardRail.Identifier = $GuardRailIdentifier
             | .KernelMemory.Services.GuardRail.Version = $GuardRailVersion
             | .OpenSearch.Endpoint = $OpenSearchEndpoint
@@ -329,7 +329,7 @@ jobs:
             | .Frontend.AadClientId = $FrontendClientId
             | .AWS.TranscribeRole = $TranscribeRoleName
             | .Hospitals.HospitalNames = $HospitalNames 
-            | .Prompts.SystemDescription= $SHAREPOINT_SOURCE_URL
+            | .Prompts.SystemDescription.SharepointSourceUri= $SharepointSourceUri
             | .CDAEnvironment = $CDAEnvironment
             ' \
             ./Backend/webapi/appsettings.json \
