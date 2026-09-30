@@ -414,7 +414,7 @@ jobs:
           # docker build \
           #  -t "$REPOSITORY_URI:$IMAGE_TAG" \
           #  -t "$REPOSITORY_URI:latest" \
-          #  ./Backend/
+          #  ./frontend/
 
           # Build 
           docker build \

@@ -259,7 +259,23 @@ jobs:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            echo "WARNING: No package-lock.json/npm-shrinkwrap.json found."
+            echo "Falling back to 'npm install'. Commit a lock file for reproducible, faster CI builds."
+            npm install
+          fi
+     
       # ======================================================================
       # UPDATE APPSETTINGS
       # ======================================================================
@@ -386,26 +402,29 @@ jobs:
         id: build-image
         shell: bash
 
-        env:
-          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
-          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-          SHORT_SHA: ${{ steps.commit.outputs.short_sha }}
-          
         run: |
           set -euo pipefail
 
           REPOSITORY_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}"
-          IMAGE_TAG="${SHORT_SHA}-latest"
+          IMAGE_TAG="${SHORT_SHA}"
 
           echo "Repository : $REPOSITORY_URI"
-          echo "Image tag  : $IMAGE_TAG"
+          echo "Image tag  : $IMAGE_TAG, latest"
 
           # Build backend image
+          # docker build \
+          #  -t "$REPOSITORY_URI:$IMAGE_TAG" \
+          #  -t "$REPOSITORY_URI:latest" \
+          #  ./Backend/
+
+          # Build 
           docker build \
             -t "$REPOSITORY_URI:$IMAGE_TAG" \
-            ./Backend/
+            -t "$REPOSITORY_URI:latest" .
 
+          # Push the commit tag first, then move "latest" to this image
           docker push "$REPOSITORY_URI:$IMAGE_TAG"
+          docker push "$REPOSITORY_URI:latest"
 
           # Get immutable ECR digest
           IMAGE_DIGEST="$(
@@ -439,13 +458,37 @@ jobs:
         shell: bash
 
         env:
+          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+          ECS_SERVICE: ${{ vars.ECS_SERVICE }}
           ECS_TASK_DEFINITION_FAMILY: ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
 
         run: |
           set -euo pipefail
 
+          # Task definition the service is actually using (its desired/PRIMARY deployment).
+          CURRENT_TASK_DEF_ARN="$(
+            aws ecs describe-services \
+              --cluster "$ECS_CLUSTER" \
+              --services "$ECS_SERVICE" \
+              --query 'services[0].taskDefinition' \
+              --output text
+          )"
+
+          if [[ -z "$CURRENT_TASK_DEF_ARN" || "$CURRENT_TASK_DEF_ARN" == "None" ]]; then
+            echo "::error::Unable to resolve the task definition for service '$ECS_SERVICE' in cluster '$ECS_CLUSTER'."
+            exit 1
+          fi
+
+          # Sanity check: the service must belong to the expected family.
+          if [[ "$CURRENT_TASK_DEF_ARN" != *":task-definition/${ECS_TASK_DEFINITION_FAMILY}:"* ]]; then
+            echo "::error::Service is running '$CURRENT_TASK_DEF_ARN', which is not in family '$ECS_TASK_DEFINITION_FAMILY'."
+            exit 1
+          fi
+
+          echo "Service is running: $CURRENT_TASK_DEF_ARN"
+
           aws ecs describe-task-definition \
-            --task-definition "$ECS_TASK_DEFINITION_FAMILY" \
+            --task-definition "$CURRENT_TASK_DEF_ARN" \
             --query "taskDefinition" \
             --output json \
             > task-definition.json
