@@ -205,7 +205,7 @@ jobs:
 
           check "TenantId"              "${{ vars.TenantId }}"
           check "ClientId"              "${{ vars.ClientId }}"
-          check "Scopes"                "${{ vars.Scopes }}"
+          check "Scopes"                "${{ vars.myenv }}"
           check "SecretName"            "${{ vars.SecretName }}"
           check "AllowedOrigin"         "${{ vars.AllowedOrigin }}"
           check "GuardrailIdentifier"   "${{ vars.GuardrailIdentifier }}"
@@ -215,7 +215,7 @@ jobs:
           check "TextModelId"           "${{ vars.TextModelId }}"
           check "TextModelVersion"      "${{ vars.TextModelVersion }}"
           check "OpenSearchIndexName"   "${{ vars.OpenSearchIndexName }}"
-          check "LibraryFilterKeyName"  "${{ vars.LibraryFilterKeyName }}"
+          check "LibraryFilterKeyName"  "${{ vars.KeyName }}"
           check "FrontendClientId"      "${{ vars.FrontendClientId }}"
           check "TranscribeRoleName"    "${{ vars.TranscribeRoleName }}"
           check "CDAEnvironment"        "${{ vars.CDAEnvironment }}"
@@ -284,7 +284,7 @@ jobs:
         env:
           TENANT_ID:               ${{ vars.TenantId }}
           CLIENT_ID:               ${{ vars.ClientId }}
-          SCOPES:                  ${{ vars.Scopes }}
+          SCOPES:                  ${{ vars.myenv }}
           AWS_REGION:              ${{ vars.AWS_REGION }}
           SECRETNAME:              ${{ vars.SecretName }}
           ALLOWEDORIGIN:           ${{ vars.AllowedOrigin }}
@@ -295,7 +295,7 @@ jobs:
           TEXT_MODEL_ID:           ${{ vars.TextModelId }}
           TEXT_MODEL_VERSION:      ${{ vars.TextModelVersion }}
           OPENSEARCH_INDEX_NAME:   ${{ vars.OpenSearchIndexName }}
-          LIBRARY_FILTER_KEY_NAME: ${{ vars.LibraryFilterKeyName }}
+          LIBRARY_FILTER_KEY_NAME: ${{ vars.KeyName }}
           FRONTEND_CLIENT_ID:      ${{ vars.FrontendClientId }}
           TRANSCRIBE_ROLE_NAME:    ${{ vars.TranscribeRoleName }}
           CDA_ENVIRONMENT:         ${{ vars.CDAEnvironment }}
