@@ -1,4 +1,4 @@
-name: Multi-env-Note-app-BE-deployment-v1
+name: Multi-env-Note-app-BE
 
 on:
   workflow_dispatch:
@@ -11,11 +11,11 @@ permissions:
 # Resolve environment from the GitHub branch
 #
 # Branch mapping:
-#   dev       -> dev
-#   hotfix/*  -> dev
-#   sit       -> sit
-#   uat       -> uat
-#   prod      -> prod
+#   release/development -> release/development
+#   hotfix/*            -> release/development 
+#   release/stage       -> release/stage
+#   release/uat         -> release/uat
+#   main                -> main
 #
 # No branch input.
 # No environment input.
@@ -56,7 +56,7 @@ jobs:
 
           case "$BRANCH" in
 
-            dev)
+            release/development)
               ENVIRONMENT="dev"
               ;;
 
@@ -64,26 +64,26 @@ jobs:
               ENVIRONMENT="dev"
               ;;
 
-            sit)
+            release/stage)
               ENVIRONMENT="sit"
               ;;
 
-            uat)
+            release/uat)
               ENVIRONMENT="uat"
               ;;
 
-            prod)
+            main)
               ENVIRONMENT="prod"
               ;;
 
             *)
               echo "::error::Branch '$BRANCH' is not allowed for deployment."
               echo "::error::Allowed branches:"
-              echo "::error::  dev"
+              echo "::error::  release/development"
               echo "::error::  hotfix/*"
-              echo "::error::  sit"
-              echo "::error::  uat"
-              echo "::error::  prod"
+              echo "::error::  release/stage"
+              echo "::error::  release/uat"
+              echo "::error::  main"
               exit 1
               ;;
 
@@ -121,11 +121,11 @@ jobs:
     #
     # Environment is automatically resolved from the branch.
     #
-    # dev       -> GitHub Environment: dev
-    # hotfix/*  -> GitHub Environment: dev
-    # sit       -> GitHub Environment: sit
-    # uat       -> GitHub Environment: uat
-    # prod      -> GitHub Environment: prod
+    # release/development    -> GitHub Environment: dev
+    # hotfix/*               -> GitHub Environment: dev
+    # release/stage          -> GitHub Environment: sit
+    # release/uat            -> GitHub Environment: uat
+    # main                   -> GitHub Environment: prod
     #
     # Configure required reviewers for prod under:
     # Repository -> Settings -> Environments -> prod
@@ -193,29 +193,27 @@ jobs:
 
           echo "Validating AWS/ECS configuration..."
 
-          check "AWS_REGION"                   "${{ vars.AWS_REGION }}"
-          check "ECS_CLUSTER"                  "${{ vars.ECS_CLUSTER }}"
-          check "ECS_SERVICE"                  "${{ vars.ECS_SERVICE }}"
-          check "ECS_CONTAINER_NAME"           "${{ vars.ECS_CONTAINER_NAME }}"
-          check "ECS_TASK_DEFINITION_FAMILY"   "${{ vars.ECS_TASK_DEFINITION_FAMILY }}"
-          check "ECR_REPOSITORY"               "${{ vars.ECR_REPOSITORY }}"
-          check "AWS_ROLE_ARN"                 "${{ secrets.AWS_ROLE_ARN }}"
-          
-
+          check "AWS_REGION"                  "${{ vars.AWS_REGION }}"
+          check "ECS_CLUSTER"                 "${{ vars.ECS_CLUSTER }}"
+          check "ECS_SERVICE"                 "${{ vars.ECS_SERVICE }}"
+          check "ECS_CONTAINER_NAME"          "${{ vars.ECS_CONTAINER_NAME }}"
+          check "ECS_TASK_DEFINITION_FAMILY"  "${{ vars.ECS_TASK_DEFINITION_FAMILY }}"
+          check "ECR_REPOSITORY"              "${{ vars.ECR_REPOSITORY }}"
+          check "AWS_ROLE_ARN"                "${{ secrets.AWS_ROLE_ARN }}"
+        
           echo "Validating application configuration..."
-
-          check "TenantId"                    "${{ vars.TenantId }}"
-          check "ClientId"                    "${{ vars.ClientId }}"
-          check "Scopes"                      "${{ vars.Scopes }}"
-          check "BucketName"                  "${{ vars.BucketName }}"
-          check "AllowedOrigin"               "${{ vars.AllowedOrigin }}"
-          check "SecretName"                  "${{ vars.SecretName }}"
-          check "AWSGuardrailIdentifier"      "${{ vars.AWSGuardrailIdentifier }}"
-          check "AWSGuardrailVersion"         "${{ vars.AWSGuardrailVersion }}"
-          check "SalesforceBaseUrl"           "${{ vars.SalesforceBaseUrl }}"
-          check "AWSBedrockModelId"           "${{ vars.AWSBedrockModelId }}"
-          check "AWSTranscribeRole"           "${{ vars.AWSTranscribeRole }}"
-          check "CDAEnvironment"              "${{ vars.CDAEnvironment }}"
+          check "TENANT_ID"             "${{ vars.TENANT_ID }}"
+          check "CLIENT_ID"             "${{ vars.CLIENT_ID }}"
+          check "API_SCOPES"             "${{ vars.API_SCOPES }}"
+          check "BUCKET_NAME"           "${{ vars.BUCKET_NAME }}"
+          check "NOTE_FE_API    "       "${{ vars.NOTE_FE_API }}"
+          check "CONFIG_PATH"           "${{ vars.CONFIG_PATH }}"
+          check "GUARDRAIL_IDENTIFIER"  "${{ vars.GUARDRAIL_IDENTIFIER }}"
+          check "GUARDRAIL_VERSION"     "${{ vars.GUARDRAIL_VERSION }}"
+          check "SALESFORCE_BASE_URI"   "${{ vars.SALESFORCE_BASE_URI }}"
+          check "BEDROCK_MODEL_ID"      "${{ vars.BEDROCK_MODEL_ID }}"
+          check "TRANSCRIBE_ROLE"       "${{ vars.TRANSCRIBE_ROLE }}"
+          check "CAL_ENV"               "${{ vars.CAL_ENV }}"
 
           case "$TARGET_ENV" in
 
@@ -258,23 +256,6 @@ jobs:
         with:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            echo "WARNING: No package-lock.json/npm-shrinkwrap.json found."
-            echo "Falling back to 'npm install'. Commit a lock file for reproducible, faster CI builds."
-            npm install
-          fi
      
       # ======================================================================
       # UPDATE APPSETTINGS
@@ -283,19 +264,19 @@ jobs:
         shell: bash
 
         env:
-          TENANT_ID:                   ${{ vars.TenantId }}
-          CLIENT_ID:                   ${{ vars.ClientId }}
-          SCOPES:                      ${{ vars.Scopes }}
-          AWS_REGION:                  ${{ vars.AWS_REGION }}
-          BUCKET_NAME:                 ${{ vars.BucketName }}
-          ALLOWED_ORIGIN:              ${{ vars.AllowedOrigin }}
-          SECRET_NAME:                 ${{ vars.SecretName }}
-          AWS_GUARDRAIL_IDENTIFIER:    ${{ vars.AWSGuardrailIdentifier }}
-          AWS_GUARDRAIL_VERSION:       ${{ vars.AWSGuardrailVersion }}
-          SALESFORCE_BASE_URL:         ${{ vars.SalesforceBaseUrl }}
-          AWS_BEDROCK_MODEL_ID:        ${{ vars.AWSBedrockModelId }}
-          AWS_TRANSCRIBE_ROLE:         ${{ vars.AWSTranscribeRole }}
-          CDA_ENVIRONMENT:             ${{ vars.CDAEnvironment }}
+          TENANT_ID:             ${{ vars.TENANT_ID }}
+          CLIENT_ID:             ${{ vars.CLIENT_ID }}
+          API_SCOPES:             ${{ vars.API_SCOPES }}
+          AWS_REGION:            ${{ vars.AWS_REGION }}
+          BUCKET_NAME:           ${{ vars.BUCKET_NAME }}
+          NOTE_FE_API:           ${{ vars.NOTE_FE_API }}
+          CONFIG_PATH:           ${{ vars.CONFIG_PATH }}
+          GUARDRAIL_IDENTIFIER:  ${{ vars.GUARDRAIL_IDENTIFIER }}
+          GUARDRAIL_VERSION:     ${{ vars.GUARDRAIL_VERSION }}
+          SALESFORCE_BASE_URI:   ${{ vars.SALESFORCE_BASE_URI }}
+          BEDROCK_MODEL_ID:      ${{ vars.BEDROCK_MODEL_ID }}
+          TRANSCRIBE_ROLE:       ${{ vars.TRANSCRIBE_ROLE }}
+          CAL_ENV:               ${{ vars.CAL_ENV }}
 
         run: |
           set -euo pipefail
@@ -303,33 +284,33 @@ jobs:
           test -f ./Backend/appsettings.json
 
           jq \
-            --arg TenantId "$TENANT_ID" \
-            --arg ClientId "$CLIENT_ID" \
-            --arg Scopes "$SCOPES" \
-            --arg Region "$AWS_REGION" \
-            --arg BucketName "$BUCKET_NAME" \
-            --arg AllowedOrigin "$ALLOWED_ORIGIN" \
-            --arg SecretName "$SECRET_NAME" \
-            --arg GuardrailIdentifier "$AWS_GUARDRAIL_IDENTIFIER" \
-            --arg GuardrailVersion "$AWS_GUARDRAIL_VERSION" \
-            --arg SalesforceBaseUrl "$SALESFORCE_BASE_URL" \
-            --arg BedrockModelId "$AWS_BEDROCK_MODEL_ID" \
-            --arg TranscribeRole "$AWS_TRANSCRIBE_ROLE" \
-            --arg CDAEnvironment "$CDA_ENVIRONMENT" \
+            --arg TENANT_ID "$TENANT_ID" \
+            --arg CLIENT_ID "$CLIENT_ID" \
+            --arg API_SCOPES "$API_SCOPES" \
+            --arg REGION "$AWS_REGION" \
+            --arg BUCKET_NAME "$BUCKET_NAME" \
+            --arg NOTE_FE_API "$NOTE_FE_API" \
+            --arg CONFIG_PATH "$CONFIG_PATH" \
+            --arg GUARDRAIL_IDENTIFIER "$GUARDRAIL_IDENTIFIER" \
+            --arg GUARDRAIL_VERSION "$GUARDRAIL_VERSION" \
+            --arg SALESFORCE_BASE_URI "$SALESFORCE_BASE_URI" \
+            --arg BEDROCK_MODEL_ID "$BEDROCK_MODEL_ID" \
+            --arg TRANSCRIBE_ROLE "$TRANSCRIBE_ROLE" \
+            --arg CAL_ENV "$CAL_ENV" \
             '
-            .EntraId.TenantId = $TenantId
-            | .EntraId.ClientId = $ClientId
-            | .EntraId.Scope = $Scopes
-            | .AWS.Region = $Region
-            | .AWS.BucketName = $BucketName
-            | .AllowedOrigin = $AllowedOrigin
-            | .AWS.SecretName = $SecretName
-            | .AWS.GuardrailIdentifier = $GuardrailIdentifier
-            | .AWS.GuardrailVersion = $GuardrailVersion
-            | .Salesforce.BaseUrl = $SalesforceBaseUrl
-            | .AWS.Bedrock.ModelId = $BedrockModelId
-            | .AWS.TranscribeRole = $TranscribeRole
-            | .CDAEnvironment = $CDAEnvironment
+            .EntraId.TenantId = $TENANT_ID
+            | .EntraId.ClientId = $CLIENT_ID
+            | .EntraId.Scope = $API_SCOPES
+            | .AWS.Region = $REGION
+            | .AWS.BucketName = $BUCKET_NAME
+            | .AllowedOrigin = $NOTE_FE_API
+            | .AWS.SecretName = $CONFIG_PATH
+            | .AWS.GuardrailIdentifier = $GUARDRAIL_IDENTIFIER
+            | .AWS.GuardrailVersion = $GUARDRAIL_VERSION
+            | .Salesforce.BaseUrl = $SALESFORCE_BASE_URI
+            | .AWS.Bedrock.ModelId = $BEDROCK_MODEL_ID
+            | .AWS.TranscribeRole = $TRANSCRIBE_ROLE
+            | .CDAEnvironment = $CAL_ENV
             ' \
             ./Backend/appsettings.json \
             > ./Backend/appsettings.tmp.json
