@@ -1,4 +1,4 @@
-name: Multi-env-notes-app-FE-deployment-v1
+name: Multi-env-notes-app-FE
 
 on:
   workflow_dispatch:
@@ -11,11 +11,11 @@ permissions:
 # Resolve environment from the GitHub branch
 #
 # Branch mapping:
-#   dev       -> dev
-#   hotfix/*  -> dev
-#   sit       -> sit
-#   uat       -> uat
-#   prod      -> prod
+#   release/development -> release/development
+#   hotfix/*            -> release/development 
+#   release/stage       -> release/stage
+#   release/uat         -> release/uat
+#   main                -> main
 #
 # No branch input.
 # No environment input.
@@ -56,7 +56,7 @@ jobs:
 
           case "$BRANCH" in
 
-            dev)
+            release/development)
               ENVIRONMENT="dev"
               ;;
 
@@ -64,26 +64,26 @@ jobs:
               ENVIRONMENT="dev"
               ;;
 
-            sit)
+            release/stage)
               ENVIRONMENT="sit"
               ;;
 
-            uat)
+            release/uat)
               ENVIRONMENT="uat"
               ;;
 
-            prod)
+            main)
               ENVIRONMENT="prod"
               ;;
 
             *)
               echo "::error::Branch '$BRANCH' is not allowed for deployment."
               echo "::error::Allowed branches:"
-              echo "::error::  dev"
+              echo "::error::  release/development"
               echo "::error::  hotfix/*"
-              echo "::error::  sit"
-              echo "::error::  uat"
-              echo "::error::  prod"
+              echo "::error::  release/stage"
+              echo "::error::  release/uat"
+              echo "::error::  main"
               exit 1
               ;;
 
@@ -121,11 +121,11 @@ jobs:
     #
     # Environment is automatically resolved from the branch.
     #
-    # dev       -> GitHub Environment: dev
-    # hotfix/*  -> GitHub Environment: dev
-    # sit       -> GitHub Environment: sit
-    # uat       -> GitHub Environment: uat
-    # prod      -> GitHub Environment: prod
+    # release/development    -> GitHub Environment: dev
+    # hotfix/*               -> GitHub Environment: dev
+    # release/stage          -> GitHub Environment: sit
+    # release/uat            -> GitHub Environment: uat
+    # main                   -> GitHub Environment: prod
     #
     # Configure required reviewers for prod under:
     # Repository -> Settings -> Environments -> prod
@@ -202,12 +202,12 @@ jobs:
 
           echo "Validating App values configuration..."
 
-          check "ClientId"                    "${{ vars.ClientId }}"
-          check "TenantId"                    "${{ vars.TenantId }}"
-          check "Scopes"                      "${{ vars.Scopes }}"
-          check "Api_Base_Uri"                "${{ vars.Api_Base_Uri }}"
-          check "Portal_Origin"               "${{ vars.Portal_Origin }}"
-          check "Portal_App_BE_Uri"           "${{ vars.Portal_App_BE_Uri }}"
+          check "CLIENT_ID"                    "${{ vars.CLIENT_ID }}"
+          check "TENANT_ID"                    "${{ vars.TENANT_ID}}"
+          check "API_SCOPES"                   "${{ vars.API_SCOPES }}"
+          check "NOTE_BE_API"                  "${{ vars.NOTE_BE_API }}"
+          check "PORTAL_FE_API"                "${{ vars.PORTAL_FE_API}}"
+          check "PORTAL_BE_API"                "${{ vars.PORTAL_BE_API }}"
      
           # Environment-specific configuration.
           case "$TARGET_ENV" in
@@ -253,6 +253,7 @@ jobs:
         with:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -281,25 +282,25 @@ jobs:
         shell: bash
 
         env:
-          ClientId:             ${{ vars.ClientId }}
-          TenantId:             ${{ vars.TenantId }}
-          Scopes:               ${{ vars.Scopes }}
-          Api_Base_Uri:         ${{ vars.Api_Base_Uri }}
-          Portal_Origin:        ${{ vars.Portal_Origin }}
-          Portal_App_BE_Uri:    ${{ vars.Portal_App_BE_Uri }}
+          CLIENT_ID:            ${{ vars.CLIENT_ID }}
+          TENANT_ID:            ${{ vars.TENANT_ID }}
+          API_SCOPES:           ${{ vars.API_SCOPES }}
+          NOTE_BE_API:          ${{ vars.NOTE_BE_API }}
+          PORTAL_FE_API:        ${{ vars.PORTAL_FE_API}}
+          PORTAL_BE_API:        ${{ vars.PORTAL_BE_API }}
           AWS_REGION:           ${{ vars.AWS_REGION }}
           
         run: |
           set -euo pipefail
-
+         
           test -f ./frontend/.env
           
           envsubst \
-            '${ClientId} ${TenantId} ${Scopes} ${Portal_Origin} ${Api_Base_Uri} ${Portal_App_BE_Uri} ${AWS_REGION}' \
+            '${CLIENT_ID} ${TENANT_ID} ${API_SCOPES} ${PORTAL_FE_API} ${NOTE_BE_API} ${PORTAL_BE API} ${AWS_REGION}' \
             < ./frontend/.env \
             > /tmp/frontend.env
 
-          mv /tmp/frontend.env ./frontend/.env
+          mv /tmp/frontend.env ./frontend/.env.production
 
 
       # ======================================================================
@@ -309,18 +310,18 @@ jobs:
         shell: bash
 
         env:
-          Api_Base_Uri:         ${{ vars.Api_Base_Uri }}
-          Portal_Origin:        ${{ vars.Portal_Origin }}
-          Portal_App_BE_Uri:    ${{ vars.Portal_App_BE_Uri }}
+          NOTE_BE_API:         ${{ vars.NOTE_BE_API }}
+          PORTAL_FE_API:       ${{ vars.PORTAL_FE_API }}
+          PORTAL_BE_API:       ${{ vars.PORTAL_BE_API}}
           
         run: |
           set -euo pipefail
 
           test -f ./frontend/nginx.conf
 
-          export BACKEND_WS_URL="${Api_Base_Uri/https:/wss:}"
+          export BACKEND_WS_URL="${NOTE_BE_API/https:/wss:}"
           envsubst \
-           '${Portal_Origin} ${Api_Base_Uri} ${BACKEND_WS_URL} ${Portal_App_BE_Uri}' \
+           '${PORTAL_FE_API} ${NOTE_BE_API} ${BACKEND_WS_URL} ${PORTAL_BE_API}' \
             < ./frontend/nginx.conf \
             > /tmp/nginx.conf
 

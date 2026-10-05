@@ -287,7 +287,7 @@ jobs:
             --arg TENANT_ID      "$TENANT_ID" \
             --arg CLIENT_ID      "$CLIENT_ID" \
             --arg API_SCOPES     "$API_SCOPES" \
-            --arg Region         "$AWS_REGION" \
+            --arg REGION         "$AWS_REGION" \
             --arg CONFIG_PATH    "$CONFIG_PATH" \
             --arg CHAT_FE_API    "$CHAT_FE_API" \
             --arg NOTE_FE_API    "$NOTE_FE_API" \
@@ -298,7 +298,7 @@ jobs:
             .EntraId.TenantId = $TENANT_ID
             | .EntraId.ClientId = $CLIENT_ID
             | .EntraId.Scopes = $API_SCOPES
-            | .AWS.Region = $Region
+            | .AWS.Region = $REGION
             | .AWS.SecretName = $CONFIG_PATH
             | .Navigation.AIChat = $CHAT_FE_API
             | .Navigation.AINotes = $NOTE_FE_API
