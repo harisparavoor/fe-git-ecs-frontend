@@ -1,4 +1,4 @@
-name: Multi-env-portal-app-BE-deployment-v1
+name: Multi-env-Note-app-BE-deployment-v1
 
 on:
   workflow_dispatch:
@@ -149,17 +149,6 @@ jobs:
     steps:
 
       # ======================================================================
-      # CHECKOUT
-      # ======================================================================
-
-     # - name: Checkout deployment branch
-     #   uses: actions/checkout@v4
-     #   with:
-     #     ref: ${{ needs.resolve-environment.outputs.branch }}
-     #     fetch-depth: 1
-
-
-      # ======================================================================
       # DEPLOYMENT INFORMATION
       # ======================================================================
 
@@ -204,26 +193,29 @@ jobs:
 
           echo "Validating AWS/ECS configuration..."
 
-          check "AWS_REGION"  ${{ vars.AWS_REGION }}
-          check "ECS_CLUSTER" ${{ vars.ECS_CLUSTER }} 
-          check "ECS_SERVICE" ${{ vars.ECS_SERVICE }}
-          check "ECS_CONTAINER_NAME" "${{ vars.ECS_CONTAINER_NAME }}"
-          check "ECS_TASK_DEFINITION_FAMILY" ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
-          check "ECR_REPOSITORY" ${{ vars.ECR_REPOSITORY }}
-          check "AWS_ROLE_ARN" ${{ secrets.AWS_ROLE_ARN }}
+          check "AWS_REGION"                   "${{ vars.AWS_REGION }}"
+          check "ECS_CLUSTER"                  "${{ vars.ECS_CLUSTER }}"
+          check "ECS_SERVICE"                  "${{ vars.ECS_SERVICE }}"
+          check "ECS_CONTAINER_NAME"           "${{ vars.ECS_CONTAINER_NAME }}"
+          check "ECS_TASK_DEFINITION_FAMILY"   "${{ vars.ECS_TASK_DEFINITION_FAMILY }}"
+          check "ECR_REPOSITORY"               "${{ vars.ECR_REPOSITORY }}"
+          check "AWS_ROLE_ARN"                 "${{ secrets.AWS_ROLE_ARN }}"
+          
 
           echo "Validating application configuration..."
 
-          check "TenantId" ${{ vars.TenantId }}
-          check "ClientId" ${{ vars.ClientId }}
-          check "Scopes" ${{ vars.Scopes }}
-          check "SecretName" ${{ vars.SecretName }}
-          check "AIChat" ${{ vars.AIChat }}
-          check "AINotes" ${{ vars.AINotes }}
-          check "WebUrl" ${{ vars.WebUrl }}
-          check "AllowedOrigins"  ${{ vars.AllowedOrigins }}
-          check "CDAEnvironment"  ${{ vars.CDAEnvironment }}
-          # Environment-specific configuration
+          check "TenantId"                    "${{ vars.TenantId }}"
+          check "ClientId"                    "${{ vars.ClientId }}"
+          check "Scopes"                      "${{ vars.Scopes }}"
+          check "BucketName"                  "${{ vars.BucketName }}"
+          check "AllowedOrigin"               "${{ vars.AllowedOrigin }}"
+          check "SecretName"                  "${{ vars.SecretName }}"
+          check "AWSGuardrailIdentifier"      "${{ vars.AWSGuardrailIdentifier }}"
+          check "AWSGuardrailVersion"         "${{ vars.AWSGuardrailVersion }}"
+          check "SalesforceBaseUrl"           "${{ vars.SalesforceBaseUrl }}"
+          check "AWSBedrockModelId"           "${{ vars.AWSBedrockModelId }}"
+          check "AWSTranscribeRole"           "${{ vars.AWSTranscribeRole }}"
+          check "CDAEnvironment"              "${{ vars.CDAEnvironment }}"
 
           case "$TARGET_ENV" in
 
@@ -263,14 +255,10 @@ jobs:
       # ======================================================================
       - name: Checkout
         uses: actions/checkout@v4
-
         with:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
 
-      # Optional sanity build of the app before containerizing.
-      # Remove this step if your Docker build already handles install/build.
-      # -----------------------------------------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -291,21 +279,23 @@ jobs:
       # ======================================================================
       # UPDATE APPSETTINGS
       # ======================================================================
-
       - name: Update appsettings.json
         shell: bash
 
         env:
-          TENANT_ID: ${{ vars.TenantId }}
-          CLIENT_ID: ${{ vars.ClientId }}
-          SCOPES: ${{ vars.Scopes }}
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          SECRET_NAME: ${{ vars.SecretName }}
-          AICHAT: ${{ vars.AIChat }}
-          AINOTES: ${{ vars.AINotes }}
-          WEB_URL: ${{ vars.WebUrl }}
-          ALLOWED_ORIGINS: ${{ vars.AllowedOrigins }}
-          CDA_ENVIRONMENT: ${{ vars.CDAEnvironment }}
+          TENANT_ID:                   ${{ vars.TenantId }}
+          CLIENT_ID:                   ${{ vars.ClientId }}
+          SCOPES:                      ${{ vars.Scopes }}
+          AWS_REGION:                  ${{ vars.AWS_REGION }}
+          BUCKET_NAME:                 ${{ vars.BucketName }}
+          ALLOWED_ORIGIN:              ${{ vars.AllowedOrigin }}
+          SECRET_NAME:                 ${{ vars.SecretName }}
+          AWS_GUARDRAIL_IDENTIFIER:    ${{ vars.AWSGuardrailIdentifier }}
+          AWS_GUARDRAIL_VERSION:       ${{ vars.AWSGuardrailVersion }}
+          SALESFORCE_BASE_URL:         ${{ vars.SalesforceBaseUrl }}
+          AWS_BEDROCK_MODEL_ID:        ${{ vars.AWSBedrockModelId }}
+          AWS_TRANSCRIBE_ROLE:         ${{ vars.AWSTranscribeRole }}
+          CDA_ENVIRONMENT:             ${{ vars.CDAEnvironment }}
 
         run: |
           set -euo pipefail
@@ -317,22 +307,28 @@ jobs:
             --arg ClientId "$CLIENT_ID" \
             --arg Scopes "$SCOPES" \
             --arg Region "$AWS_REGION" \
+            --arg BucketName "$BUCKET_NAME" \
+            --arg AllowedOrigin "$ALLOWED_ORIGIN" \
             --arg SecretName "$SECRET_NAME" \
-            --arg AIChat "$AICHAT" \
-            --arg AINotes "$AINOTES" \
-            --arg WebUrl "$WEB_URL" \
-            --arg AllowedOrigins "$ALLOWED_ORIGINS" \
+            --arg GuardrailIdentifier "$AWS_GUARDRAIL_IDENTIFIER" \
+            --arg GuardrailVersion "$AWS_GUARDRAIL_VERSION" \
+            --arg SalesforceBaseUrl "$SALESFORCE_BASE_URL" \
+            --arg BedrockModelId "$AWS_BEDROCK_MODEL_ID" \
+            --arg TranscribeRole "$AWS_TRANSCRIBE_ROLE" \
             --arg CDAEnvironment "$CDA_ENVIRONMENT" \
             '
             .EntraId.TenantId = $TenantId
             | .EntraId.ClientId = $ClientId
-            | .EntraId.Scopes = $Scopes
+            | .EntraId.Scope = $Scopes
             | .AWS.Region = $Region
+            | .AWS.BucketName = $BucketName
+            | .AllowedOrigin = $AllowedOrigin
             | .AWS.SecretName = $SecretName
-            | .Navigation.AIChat = $AIChat
-            | .Navigation.AINotes = $AINotes
-            | .BannerOptions.Banners[].WebUrl = $WebUrl
-            | .AllowedOrigins = $AllowedOrigins
+            | .AWS.GuardrailIdentifier = $GuardrailIdentifier
+            | .AWS.GuardrailVersion = $GuardrailVersion
+            | .Salesforce.BaseUrl = $SalesforceBaseUrl
+            | .AWS.Bedrock.ModelId = $BedrockModelId
+            | .AWS.TranscribeRole = $TranscribeRole
             | .CDAEnvironment = $CDAEnvironment
             ' \
             ./Backend/appsettings.json \
@@ -402,36 +398,37 @@ jobs:
       # ======================================================================
       # BUILD AND PUSH DOCKER IMAGE
       # ======================================================================
-
-      - name: Build and push Docker image
+      - name: Build, tag and push image to Amazon ECR
         id: build-image
         shell: bash
-
+        
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-          ENVIRONMENT: ${{ needs.resolve-environment.outputs.environment }}
           SHORT_SHA: ${{ steps.commit.outputs.short_sha }}
-
         run: |
           set -euo pipefail
 
           REPOSITORY_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}"
-
-          TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
-          IMAGE_TAG="${ENVIRONMENT}-${SHORT_SHA}-${TIMESTAMP}"
+          IMAGE_TAG="${SHORT_SHA}"
 
           echo "Repository : $REPOSITORY_URI"
-          echo "Image tag  : $IMAGE_TAG"
+          echo "Image tag  : $IMAGE_TAG, latest"
 
           # Build backend image
           # docker build \
           #  -t "$REPOSITORY_URI:$IMAGE_TAG" \
+          #  -t "$REPOSITORY_URI:latest" \
           #  ./Backend/
-          
-          docker build  -t "$REPOSITORY_URI:$IMAGE_TAG" .
 
+          # Build 
+          docker build \
+            -t "$REPOSITORY_URI:$IMAGE_TAG" \
+            -t "$REPOSITORY_URI:latest" .
+
+          # Push the commit tag first, then move "latest" to this image
           docker push "$REPOSITORY_URI:$IMAGE_TAG"
+          docker push "$REPOSITORY_URI:latest"
 
           # Get immutable ECR digest
           IMAGE_DIGEST="$(
@@ -465,13 +462,37 @@ jobs:
         shell: bash
 
         env:
+          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+          ECS_SERVICE: ${{ vars.ECS_SERVICE }}
           ECS_TASK_DEFINITION_FAMILY: ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
 
         run: |
           set -euo pipefail
 
+          # Task definition the service is actually using (its desired/PRIMARY deployment).
+          CURRENT_TASK_DEF_ARN="$(
+            aws ecs describe-services \
+              --cluster "$ECS_CLUSTER" \
+              --services "$ECS_SERVICE" \
+              --query 'services[0].taskDefinition' \
+              --output text
+          )"
+
+          if [[ -z "$CURRENT_TASK_DEF_ARN" || "$CURRENT_TASK_DEF_ARN" == "None" ]]; then
+            echo "::error::Unable to resolve the task definition for service '$ECS_SERVICE' in cluster '$ECS_CLUSTER'."
+            exit 1
+          fi
+
+          # Sanity check: the service must belong to the expected family.
+          if [[ "$CURRENT_TASK_DEF_ARN" != *":task-definition/${ECS_TASK_DEFINITION_FAMILY}:"* ]]; then
+            echo "::error::Service is running '$CURRENT_TASK_DEF_ARN', which is not in family '$ECS_TASK_DEFINITION_FAMILY'."
+            exit 1
+          fi
+
+          echo "Service is running: $CURRENT_TASK_DEF_ARN"
+
           aws ecs describe-task-definition \
-            --task-definition "$ECS_TASK_DEFINITION_FAMILY" \
+            --task-definition "$CURRENT_TASK_DEF_ARN" \
             --query "taskDefinition" \
             --output json \
             > task-definition.json
