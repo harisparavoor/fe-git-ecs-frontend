@@ -1,4 +1,4 @@
-name: Multi-env-portel-app-FE-v2
+name: Multi-env-portal-app-FE
 
 on:
   workflow_dispatch:
@@ -11,11 +11,11 @@ permissions:
 # Resolve environment from the GitHub branch
 #
 # Branch mapping:
-#   dev       -> dev
-#   hotfix/*  -> dev
-#   sit       -> sit
-#   uat       -> uat
-#   prod      -> prod
+#   release/development -> release/development
+#   hotfix/*            -> release/development 
+#   release/stage       -> release/stage
+#   release/uat         -> release/uat
+#   main                -> main
 #
 # No branch input.
 # No environment input.
@@ -56,7 +56,7 @@ jobs:
 
           case "$BRANCH" in
 
-            dev)
+            release/development)
               ENVIRONMENT="dev"
               ;;
 
@@ -64,26 +64,26 @@ jobs:
               ENVIRONMENT="dev"
               ;;
 
-            sit)
+            release/stage)
               ENVIRONMENT="sit"
               ;;
 
-            uat)
+            release/uat)
               ENVIRONMENT="uat"
               ;;
 
-            prod)
+            main)
               ENVIRONMENT="prod"
               ;;
 
             *)
               echo "::error::Branch '$BRANCH' is not allowed for deployment."
               echo "::error::Allowed branches:"
-              echo "::error::  dev"
+              echo "::error::  release/development"
               echo "::error::  hotfix/*"
-              echo "::error::  sit"
-              echo "::error::  uat"
-              echo "::error::  prod"
+              echo "::error::  release/stage"
+              echo "::error::  release/uat"
+              echo "::error::  main"
               exit 1
               ;;
 
@@ -121,11 +121,11 @@ jobs:
     #
     # Environment is automatically resolved from the branch.
     #
-    # dev       -> GitHub Environment: dev
-    # hotfix/*  -> GitHub Environment: dev
-    # sit       -> GitHub Environment: sit
-    # uat       -> GitHub Environment: uat
-    # prod      -> GitHub Environment: prod
+    # release/development    -> GitHub Environment: dev
+    # hotfix/*               -> GitHub Environment: dev
+    # release/stage          -> GitHub Environment: sit
+    # release/uat            -> GitHub Environment: uat
+    # main                   -> GitHub Environment: prod
     #
     # Configure required reviewers for prod under:
     # Repository -> Settings -> Environments -> prod
@@ -202,13 +202,13 @@ jobs:
 
           echo "Validating App values configuration..."
 
-          check "CLIENTID"                   "${{ vars.REACT_APP_AZURE_AD_CLIENTID }}"
-          check "AD_AUTHORITY"               "${{ vars.REACT_APP_AZURE_AD_AUTHORITY }}"
-          check "APP_API_URL"                "${{ vars.REACT_APP_API_URL }}"
-          check "AD_API_SCOPE"               "${{ vars.REACT_APP_AZURE_AD_API_SCOPE }}"
-          check "CHAT_ORIGIN"                "${{ vars.REACT_APP_CHAT_ORIGIN }}"
-          check "NOTES_ORIGIN"               "${{ vars.REACT_APP_NOTES_ORIGIN }}"
-               
+          check "CLIENT_ID"             "${{ vars.CLIENT_ID }}"
+          check "AD_AUTHORITY"          "${{ vars.AD_AUTHORITY }}"
+          check "PORTAL_BE_API"         "${{ vars.PORTAL_BE_API }}"
+          check "API_SCOPES"            "${{ vars.API_SCOPES }}"
+          check "CHAT_FE_API"           "${{ vars.CHAT_FE_API }}"
+          check "NOTE_FE_API"           "${{ vars.NOTE_FE_API }}"
+     
           # Environment-specific configuration.
           case "$TARGET_ENV" in
 
@@ -253,7 +253,6 @@ jobs:
         with:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -282,20 +281,21 @@ jobs:
         shell: bash
 
         env:
-          CLIENTID: ${{ vars.REACT_APP_AZURE_AD_CLIENTID }}
-          AD_AUTHORITY: ${{ vars.REACT_APP_AZURE_AD_AUTHORITY }}
-          APP_API_URL: ${{ vars.REACT_APP_API_URL }}
-          AD_API_SCOPE: ${{ vars.REACT_APP_AZURE_AD_API_SCOPE }}
-          CHAT_ORIGIN: ${{ vars.REACT_APP_CHAT_ORIGIN }}
-          NOTES_ORIGIN: ${{ vars.REACT_APP_NOTES_ORIGIN }}
-
+          CLIENT_ID:      ${{ vars.CLIENT_ID }}
+          AD_AUTHORITY:   ${{ vars.AD_AUTHORITYY }}
+          PORTAL_BE_API:  ${{ vars.PORTAL_BE_API }}
+          API_SCOPES:     ${{ vars.API_SCOPES }}
+          CHAT_FE_API:    ${{ vars.CHAT_FE_API }}
+          NOTE_FE_API:    ${{ vars.NOTE_FE_API }}
+       
+                  
         run: |
           set -euo pipefail
 
           test -f ./frontend/.env
 
           envsubst \
-            '${CLIENTID} ${AD_AUTHORITY} ${APP_API_URL} ${AD_API_SCOPE} ${CHAT_ORIGIN} ${NOTES_ORIGIN}' \
+            '${CLIENT_ID} ${AD_AUTHORITY} ${PORTAL_BE_API} ${API_SCOPES} ${CHAT_FE_API} ${NOTE_FE_API}' \
             < ./frontend/.env \
             > /tmp/frontend.env
 
@@ -309,9 +309,10 @@ jobs:
         shell: bash
 
         env:
-          APP_API_URL: ${{ vars.REACT_APP_API_URL }}
-          CHAT_ORIGIN: ${{ vars.REACT_APP_CHAT_ORIGIN }}
-          NOTES_ORIGIN: ${{ vars.REACT_APP_NOTES_ORIGIN }}
+          PORTAL_BE_API:  ${{ vars.PORTAL_BE_API }}
+          CHAT_FE_API:    ${{ vars.CHAT_FE_API }}
+          NOTE_FE_API:    ${{ vars.NOTE_FE_API }}
+      
 
         run: |
           set -euo pipefail
@@ -319,7 +320,7 @@ jobs:
           test -f ./frontend/nginx.conf
 
           envsubst \
-            '${APP_API_URL} ${CHAT_ORIGIN} ${NOTES_ORIGIN}' \
+            '${PORTAL_BE_API_URL} ${CHAT_FE_API_URL} ${NOTE_FE_API_URL}' \
             < ./frontend/nginx.conf \
             > /tmp/nginx.conf
 
@@ -333,11 +334,10 @@ jobs:
         shell: bash
 
         env:
-          APP_API_URL: ${{ vars.REACT_APP_API_URL }}
-          
-          CLIENTID: ${{ vars.REACT_APP_AZURE_AD_CLIENTID }}
-          AD_AUTHORITY: ${{ vars.REACT_APP_AZURE_AD_AUTHORITY }}
-          AD_API_SCOPE: ${{ vars.REACT_APP_AZURE_AD_API_SCOPE }}
+          PORTAL_BE_API: ${{ vars.PORTAL_BE_API }}
+          CLIENT_ID:     ${{ vars.CLIENT_ID }}
+          AD_AUTHORITY:  ${{ vars.AD_AUTHORITY }}
+          API_SCOPES:    ${{ vars.API_SCOPES }}
 
         run: |
           set -euo pipefail
@@ -345,7 +345,7 @@ jobs:
           test -f ./frontend/src/authConfig.ts
 
           envsubst \
-            '${APP_API_URL} ${CLIENTID} ${AD_AUTHORITY} ${AD_API_SCOPE}' \
+            '${PORTAL_BE_API} ${CLIENT_ID} ${AD_AUTHORITY} ${API_SCOPES}' \
             < ./frontend/src/authConfig.ts \
             > /tmp/authConfig.ts
 
@@ -397,9 +397,9 @@ jobs:
         shell: bash
 
         env:
-          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REGISTRY:   ${{ steps.ecr-login.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-          SHORT_SHA: ${{ steps.commit.outputs.short_sha }}
+          SHORT_SHA:      ${{ steps.commit.outputs.short_sha }}
           
         run: |
           set -euo pipefail
