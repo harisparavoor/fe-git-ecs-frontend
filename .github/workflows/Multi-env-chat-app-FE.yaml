@@ -306,7 +306,21 @@ jobs:
             > /tmp/nginx.conf
 
           mv /tmp/nginx.conf ./frontend/nginx.conf
+      # ======================================================================
+      # VERIFY APPSETTINGS
+      # ======================================================================
 
+      - name: Verify  config files
+        shell: bash
+
+        run: |
+          set -euo pipefail
+          
+          echo "Valus nginx.conf."
+          cat ./frontend/nginx.conf
+          
+          echo "Valus .env"
+          cat ./frontend/.env
       # ======================================================================
       # Configure AWS credentials using GitHub OIDC
       # ======================================================================
