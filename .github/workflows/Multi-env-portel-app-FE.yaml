@@ -320,7 +320,7 @@ jobs:
           test -f ./frontend/nginx.conf
 
           envsubst \
-            '${PORTAL_BE_API_URL} ${CHAT_FE_API_URL} ${NOTE_FE_API_URL}' \
+            '${PORTAL_BE_API} ${CHAT_FE_API} ${NOTE_FE_API}' \
             < ./frontend/nginx.conf \
             > /tmp/nginx.conf
 
