@@ -1,8 +1,8 @@
 const envVariables = {
-  clientId: "$CLIENTID",
+  clientId: "$CLIENT_ID",
   authority: "$AD_AUTHORITY",
-  apiUrl: "$APP_API_URL",
-  apiScope: "$AD_API_SCOPE",
-  chatOrigin: "$CHAT_ORIGIN",
-  notesOrigin: "$NOTES_ORIGIN",
+  apiUrl: "$PORTAL_BE_API",
+  apiScope: "$API_SCOPES",
+  chatOrigin: "$CHAT_FE_API",
+  notesOrigin: "$NOTE_FE_API",
 };
