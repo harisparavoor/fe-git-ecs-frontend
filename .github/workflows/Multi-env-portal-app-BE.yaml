@@ -212,7 +212,7 @@ jobs:
           check "NOTE_FE_API"      "${{ vars.NOTE_FE_API }}"
           check "WEB_URL"          "${{ vars.WEB_URL }}"
           check "FE_APPS_URLS"     "${{ vars.FE_APPS_URLS }}"
-          check "CDAEnvironment"   "${{ vars.CAL_ENV }}"
+          check "CAL_ENV"          "${{ vars.CAL_ENV }}"
           
           # Environment-specific configuration
 
