@@ -282,7 +282,7 @@ jobs:
 
         env:
           CLIENT_ID:      ${{ vars.CLIENT_ID }}
-          AD_AUTHORITY:   ${{ vars.AD_AUTHORITYY }}
+          AD_AUTHORITY:   ${{ vars.AD_AUTHORITY }}
           PORTAL_BE_API:  ${{ vars.PORTAL_BE_API }}
           API_SCOPES:     ${{ vars.API_SCOPES }}
           CHAT_FE_API:    ${{ vars.CHAT_FE_API }}
