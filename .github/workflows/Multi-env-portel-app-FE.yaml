@@ -1,4 +1,4 @@
-name: Multi-env-portal-app-FE-v2
+name: Multi-env-portal-app-FE
 
 on:
   workflow_dispatch:
