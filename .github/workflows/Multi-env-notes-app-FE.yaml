@@ -293,11 +293,11 @@ jobs:
         run: |
           set -euo pipefail
          
-          test -f ./frontend/.env
+          test -f ./frontend/.env.production
           
           envsubst \
             '${CLIENT_ID} ${TENANT_ID} ${API_SCOPES} ${PORTAL_FE_API} ${NOTE_BE_API} ${PORTAL_BE API} ${AWS_REGION}' \
-            < ./frontend/.env \
+            < ./frontend/.env.production \
             > /tmp/frontend.env
 
           mv /tmp/frontend.env ./frontend/.env.production
