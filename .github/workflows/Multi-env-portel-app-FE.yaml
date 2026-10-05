@@ -350,7 +350,21 @@ jobs:
             > /tmp/authConfig.ts
 
           mv /tmp/authConfig.ts ./frontend/src/authConfig.ts
+      # ======================================================================
+      # VERIFY APPSETTINGS
+      # ======================================================================
 
+      - name: Verify 
+        shell: bash
+
+        run: |
+          set -euo pipefail
+          echo "Valus nginx.conf."
+          cat ./frontend/nginx.conf
+          echo "Valus env."
+          cat ./frontend/.env
+          echo "Valus authConfig.ts."
+          cat ./frontend/src/authConfig.ts
 
       # ======================================================================
       # Configure AWS credentials using GitHub OIDC
