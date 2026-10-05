@@ -354,15 +354,18 @@ jobs:
       # VERIFY APPSETTINGS
       # ======================================================================
 
-      - name: Verify 
+      - name: Verify  config files
         shell: bash
 
         run: |
           set -euo pipefail
+          
           echo "Valus nginx.conf."
           cat ./frontend/nginx.conf
-          echo "Valus env."
+          
+          echo "Valus .env."
           cat ./frontend/.env
+         
           echo "Valus authConfig.ts."
           cat ./frontend/src/authConfig.ts
 
