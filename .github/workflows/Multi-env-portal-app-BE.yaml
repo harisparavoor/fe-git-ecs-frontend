@@ -303,7 +303,7 @@ jobs:
             | .Navigation.AIChat = $CHAT_FE_API
             | .Navigation.AINotes = $NOTE_FE_API
             | .BannerOptions.Banners[].WebUrl = $WEB_URL
-            | .AllowedOrigins = $AllowedOrigins
+            | .AllowedOrigins = $FE_APPS_URLS
             | .CDAEnvironment = $CDAEnvironment
             ' \
             ./Backend/appsettings.json \
