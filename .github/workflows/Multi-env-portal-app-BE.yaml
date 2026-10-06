@@ -273,8 +273,8 @@ jobs:
           API_SCOPES:           ${{ vars.API_SCOPES }}
           AWS_REGION:           ${{ vars.AWS_REGION }}
           SECRET_NAME:          ${{ vars.SECRET_NAME }}
-          CHAT_FE_API:          ${{ vars.CHAT_FE_URL }}
-          NOTES_FE_API:         ${{ vars.NOTES_FE_URL }}
+          CHAT_FE_URL:          ${{ vars.CHAT_FE_URL }}
+          NOTES_FE_URL:         ${{ vars.NOTES_FE_URL }}
           WEB_URL:              ${{ vars.WEB_URL }}
           FE_APPS_URLS:         ${{ vars.FE_APPS_URLS }}
           CAL_ENV:              ${{ vars.CAL_ENV }}
