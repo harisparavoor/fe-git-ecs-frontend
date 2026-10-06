@@ -1,4 +1,4 @@
-name: multi-env-ecs-app-FE-v3
+name: oldmulti-env-ecs-app-FE-v3
 
 on:
   workflow_dispatch:
