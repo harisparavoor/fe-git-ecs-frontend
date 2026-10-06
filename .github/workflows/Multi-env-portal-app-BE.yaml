@@ -307,8 +307,8 @@ jobs:
             | .Navigation.AINotes = $NOTES_FE_URL
             | .BannerOptions.Banners[].WebUrl = $WEB_URL
             | .AllowedOrigins = $FE_APPS_URLS
-            | .CDAEnvironment= $CAL_ENV
-            | .Database.TableNamePrefix=$DB_TABLE_NAME_PREFIX
+            | .CDAEnvironment = $CAL_ENV
+            | .Database.TableNamePrefix = $DB_TABLE_NAME_PREFIX
             ' \
             ./Backend/appsettings.json \
             > ./Backend/appsettings.tmp.json
