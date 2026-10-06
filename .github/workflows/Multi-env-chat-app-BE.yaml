@@ -206,8 +206,8 @@ jobs:
           check "TENANT_ID"               "${{ VARS.TENANT_ID }}"
           check "CLIENT_ID"               "${{ VARS.CLIENT_ID }}"
           check "API_SCOPES"              "${{ VARS.API_SCOPES }}"
-          check "CONFIG_PATH"             "${{ VARS.CONFIG_PATH }}"
-          check "CHAT_FE_API"             "${{ VARS.CHAT_FE_API }}"
+          check "SECRET_NAME"             "${{ VARS.SECRET_NAME }}"
+          check "CHAT_FE_URL"             "${{ VARS.CHAT_FE_URL }}"
           check "GUARDRAIL_IDENTIFIER"    "${{ VARS.GUARDRAIL_IDENTIFIER }}"
           check "GUARDRAIL_VERSION"       "${{ VARS.GUARDRAIL_VERSION }}"
           check "OPENSEARCH_ENDPOINT"     "${{ VARS.OPENSEARCH_ENDPOINT }}"
@@ -218,9 +218,10 @@ jobs:
           check "LIBRARY_FILTER_KEY_NAME" "${{ VARS.LIBRARY_FILTER_KEY_NAME }}"
           check "CHAT_FE_CLIENT_ID"       "${{ VARS.CHAT_FE_CLIENT_ID }}"
           check "TRANSCRIBE_ROLE"         "${{ VARS.TRANSCRIBE_ROLE }}"
-          check "CDA_ENVIRONMENT"         "${{ VARS.CDA_ENVIRONMENT }}"
+          check "CAL_ENV"                 "${{ vars.CAL_ENV }}"
           check "HOSPITAL_NAMES"          "${{ VARS.HOSPITAL_NAMES }}"
           check "SHAREPOINT_URI"          "${{ VARS.SHAREPOINT_URI }}"
+          check "DB_TABLE_NAME_PREFIX"    "${{ vars.DB_TABLE_NAME_PREFIX }}"
        
           # Environment-specific configuration
           case "$TARGET_ENV" in
@@ -269,8 +270,8 @@ jobs:
           CLIENT_ID:               ${{ VARS.CLIENT_ID }}
           API_SCOPES:              ${{ VARS.API_SCOPES }}
           AWS_REGION:              ${{ VARS.AWS_REGION }}
-          CONFIG_PATH:             ${{ VARS.CONFIG_PATH }}
-          CHAT_FE_API:             ${{ VARS.CHAT_FE_API }}
+          SECRET_NAME:             ${{ vars.SECRET_NAME }}
+          CHAT_FE_URL:             ${{ VARS.CHAT_FE_URL }}
           GUARDRAIL_IDENTIFIER:    ${{ VARS.GUARDRAIL_IDENTIFIER }}
           GUARDRAIL_VERSION:       ${{ VARS.GUARDRAIL_VERSION }}
           OPENSEARCH_ENDPOINT:     ${{ VARS.OPENSEARCH_ENDPOINT }}
@@ -281,9 +282,10 @@ jobs:
           LIBRARY_FILTER_KEY_NAME: ${{ VARS.LIBRARY_FILTER_KEY_NAME }}
           CHAT_FE_CLIENT_ID:       ${{ VARS.CHAT_FE_CLIENT_ID }}
           TRANSCRIBE_ROLE:         ${{ VARS.TRANSCRIBE_ROLE }}
-          CDA_ENVIRONMENT:         ${{ VARS.CDA_ENVIRONMENT }}
+          CAL_ENV:                 ${{ vars.CAL_ENV }}
           HOSPITAL_NAMES:          ${{ VARS.HOSPITAL_NAMES }}
           SHAREPOINT_URI:          ${{ VARS.SHAREPOINT_URI }}
+          DB_TABLE_NAME_PREFIX:    ${{ vars.DB_TABLE_NAME_PREFIX }}
 
         run: |
           set -euo pipefail
@@ -295,8 +297,8 @@ jobs:
             --arg CLIENT_ID "$CLIENT_ID" \
             --arg API_SCOPES "$API_SCOPES" \
             --arg REGION "$AWS_REGION" \
-            --arg CONFIG_PATH "$CONFIG_PATH" \
-            --arg CHAT_FE_API "$CHAT_FE_API" \
+            --arg SECRET_NAME "$SECRET_NAME" \
+            --arg CHAT_FE_URL "$CHAT_FE_URL" \
             --arg GUARDRAIL_IDENTIFIER "$GUARDRAIL_IDENTIFIER" \
             --arg GUARDRAIL_VERSION "$GUARDRAIL_VERSION" \
             --arg OPENSEARCH_ENDPOINT "$OPENSEARCH_ENDPOINT" \
@@ -307,16 +309,17 @@ jobs:
             --arg LIBRARY_FILTER_KEY_NAME "$LIBRARY_FILTER_KEY_NAME" \
             --arg CHAT_FE_CLIENT_ID "$CHAT_FE_CLIENT_ID" \
             --arg TRANSCRIBE_ROLE "$TRANSCRIBE_ROLE" \
-            --arg CDA_ENVIRONMENT "$CDA_ENVIRONMENT" \
+            --arg CAL_ENV "$CAL_ENV" \
             --arg HOSPITAL_NAMES "$HOSPITAL_NAMES" \
             --arg SHAREPOINT_URI "$SHAREPOINT_URI" \
+            --arg DB_TABLE_NAME_PREFIX  "$DB_TABLE_NAME_PREFIX" \
             '
             .Authentication.AzureAd.TenantId = $TENANT_ID
             | .Authentication.AzureAd.ClientId = $CLIENT_ID
             | .Authentication.AzureAd.Scopes = $API_SCOPES
             | .AWS.Region = $REGION
-            | .AWS.SecretName = $CONFIG_PATH
-            | .AllowedOrigins = $CHAT_FE_API
+            | .AWS.SecretName = $SECRET_NAME
+            | .AllowedOrigins = $CHAT_FE_URL
             | .KernelMemory.Services.GuardRail.Identifier = $GUARDRAIL_IDENTIFIER
             | .KernelMemory.Services.GuardRail.Version = $GUARDRAIL_VERSION
             | .OpenSearch.Endpoint = $OPENSEARCH_ENDPOINT
@@ -329,8 +332,8 @@ jobs:
             | .AWS.TranscribeRole = $TRANSCRIBE_ROLE
             | .Hospitals.HospitalNames = $HOSPITAL_NAMES
             | .Prompts.SystemDescription.SharepointSourceUri = $SHAREPOINT_URI
-            | .CDAEnvironment = $CDA_ENVIRONMENT
-            | .Database.TableNamePrefix =$DATABSE_TABLE_NAME_PREFIX      
+            | .CDAEnvironment = $CAL_ENV
+            | .DB.TableNamePrefix = $DB_TABLE_NAME_PREFIX      
             ' \
             ./Backend/webapi/appsettings.json \
             > ./Backend/webapi/appsettings.tmp.json

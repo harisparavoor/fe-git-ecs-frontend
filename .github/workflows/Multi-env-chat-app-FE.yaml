@@ -206,7 +206,7 @@ jobs:
           check "TENANT_ID"       "${{ vars.TENANT_ID }}"
           check "API_SCOPES"      "${{ vars.API_SCOPES }}"
           check "CHAT_BE_API"     "${{ vars.CHAT_BE_API }}"
-          check "PORTAL_FE_API"   "${{ vars.PORTAL_FE_API }}"
+          check "PORTAL_FE_URL"   "${{ vars.PORTAL_FE_URL }}"
           check "PORTAL_BE_API"   "${{ vars.PORTAL_BE_API }}"
 
            # Environment-specific configuration.
@@ -267,7 +267,7 @@ jobs:
           TENANT_ID:       ${{ vars.TENANT_ID }}
           API_SCOPED:      ${{ vars.API_SCOPES }}
           CHAT_BE_API:     ${{ vars.CHAT_BE_API }}
-          PORTAL_FE_API:   ${{ vars.PORTAL_FE_API }}
+          PORTAL_FE_URL:   ${{ vars.PORTAL_FE_URL }}
           PORTAL_BE_API:   ${{ vars.PORTAL_BE_API }}
           AWS_REGION:      ${{ vars.AWS_REGION }}
 
@@ -277,7 +277,7 @@ jobs:
           test -f ./frontend/.env
           
           envsubst \
-            '${CLIENT_ID } ${TENANT_ID} ${API_SCOPES} ${PORTAL_FE_API} ${CHAT_BE_API} ${PORTAL_BE_API} ${AWS_REGION}' \
+            '${CLIENT_ID } ${TENANT_ID} ${API_SCOPES} ${PORTAL_FE_URL} ${CHAT_BE_API} ${PORTAL_BE_API} ${AWS_REGION}' \
             < ./frontend/.env \
             > /tmp/frontend.env
 
@@ -291,7 +291,7 @@ jobs:
 
         env:
           PORTAL_BE_API:     ${{ vars.PORTAL_BE_API }}
-          PORTAL_FE_API:     ${{ vars.PORTAL_FE_API }}
+          PORTAL_FE_URL:     ${{ vars.PORTAL_FE_URL }}
           CHAT_BE_API:       ${{ vars.CHAT_BE_API }}
           
         run: |
@@ -301,7 +301,7 @@ jobs:
 
           export BACKEND_WS_URL="${CHAT_BE_API/https:/wss:}"
           envsubst \
-           '${PORTAL_FE_API} ${CHAT_BE_API} ${BACKEND_WS_URL} ${PORTAL_BE_API}' \
+           '${PORTAL_FE_URL} ${CHAT_BE_API} ${BACKEND_WS_URL} ${PORTAL_BE_API}' \
             < ./frontend/nginx.conf \
             > /tmp/nginx.conf
 
