@@ -202,18 +202,19 @@ jobs:
           check "AWS_ROLE_ARN"                "${{ secrets.AWS_ROLE_ARN }}"
         
           echo "Validating application configuration..."
-          check "TENANT_ID"             "${{ vars.TENANT_ID }}"
-          check "CLIENT_ID"             "${{ vars.CLIENT_ID }}"
+          check "TENANT_ID"              "${{ vars.TENANT_ID }}"
+          check "CLIENT_ID"              "${{ vars.CLIENT_ID }}"
           check "API_SCOPES"             "${{ vars.API_SCOPES }}"
-          check "BUCKET_NAME"           "${{ vars.BUCKET_NAME }}"
-          check "NOTES_FE_API    "       "${{ vars.NOTES_FE_API }}"
-          check "CONFIG_PATH"           "${{ vars.CONFIG_PATH }}"
-          check "GUARDRAIL_IDENTIFIER"  "${{ vars.GUARDRAIL_IDENTIFIER }}"
-          check "GUARDRAIL_VERSION"     "${{ vars.GUARDRAIL_VERSION }}"
-          check "SALESFORCE_BASE_URI"   "${{ vars.SALESFORCE_BASE_URI }}"
-          check "BEDROCK_MODEL_ID"      "${{ vars.BEDROCK_MODEL_ID }}"
-          check "TRANSCRIBE_ROLE"       "${{ vars.TRANSCRIBE_ROLE }}"
-          check "CAL_ENV"               "${{ vars.CAL_ENV }}"
+          check "BUCKET_NAME"            "${{ vars.BUCKET_NAME }}"
+          check "NOTES_FE_URL    "       "${{ vars.NOTES_FE_URL }}"
+          check "SECRET_NAME"            "${{ vars.SECRET_NAME }}"
+          check "GUARDRAIL_IDENTIFIER"   "${{ vars.GUARDRAIL_IDENTIFIER }}"
+          check "GUARDRAIL_VERSION"      "${{ vars.GUARDRAIL_VERSION }}"
+          check "SALESFORCE_BASE_URI"    "${{ vars.SALESFORCE_BASE_URI }}"
+          check "BEDROCK_MODEL_ID"       "${{ vars.BEDROCK_MODEL_ID }}"
+          check "TRANSCRIBE_ROLE"        "${{ vars.TRANSCRIBE_ROLE }}"
+          check "CAL_ENV"                "${{ vars.CAL_ENV }}"
+          check "DB_TABLE_NAME_PREFIX"   "${{ vars.DB_TABLE_NAME_PREFIX }}"
 
           # Environment-specific configuration
           case "$TARGET_ENV" in
@@ -270,14 +271,15 @@ jobs:
           API_SCOPES:            ${{ vars.API_SCOPES }}
           AWS_REGION:            ${{ vars.AWS_REGION }}
           BUCKET_NAME:           ${{ vars.BUCKET_NAME }}
-          NOTES_FE_API:          ${{ vars.NOTES_FE_API }}
-          CONFIG_PATH:           ${{ vars.CONFIG_PATH }}
+          NOTES_FE_URL:          ${{ vars.NOTES_FE_URL }}
+          SECRET_NAME:           ${{ vars.SECRET_NAME }}
           GUARDRAIL_IDENTIFIER:  ${{ vars.GUARDRAIL_IDENTIFIER }}
           GUARDRAIL_VERSION:     ${{ vars.GUARDRAIL_VERSION }}
           SALESFORCE_BASE_URI:   ${{ vars.SALESFORCE_BASE_URI }}
           BEDROCK_MODEL_ID:      ${{ vars.BEDROCK_MODEL_ID }}
           TRANSCRIBE_ROLE:       ${{ vars.TRANSCRIBE_ROLE }}
           CAL_ENV:               ${{ vars.CAL_ENV }}
+          DB_TABLE_NAME_PREFIX:  ${{ vars.DB_TABLE_NAME_PREFIX }}
 
         run: |
           set -euo pipefail
@@ -290,28 +292,31 @@ jobs:
             --arg API_SCOPES "$API_SCOPES" \
             --arg REGION "$AWS_REGION" \
             --arg BUCKET_NAME "$BUCKET_NAME" \
-            --arg NOTES_FE_API "$NOTES_FE_API" \
-            --arg CONFIG_PATH "$CONFIG_PATH" \
+            --arg NOTES_FE_URL "$NOTES_FE_URL" \
+            --arg SECRET_NAME   "$SECRET_NAME" \
             --arg GUARDRAIL_IDENTIFIER "$GUARDRAIL_IDENTIFIER" \
             --arg GUARDRAIL_VERSION "$GUARDRAIL_VERSION" \
             --arg SALESFORCE_BASE_URI "$SALESFORCE_BASE_URI" \
             --arg BEDROCK_MODEL_ID "$BEDROCK_MODEL_ID" \
             --arg TRANSCRIBE_ROLE "$TRANSCRIBE_ROLE" \
             --arg CAL_ENV "$CAL_ENV" \
+            --arg DB_TABLE_NAME_PREFIX "$DB_TABLE_NAME_PREFIX" \
+            
             '
             .EntraId.TenantId = $TENANT_ID
             | .EntraId.ClientId = $CLIENT_ID
             | .EntraId.Scope = $API_SCOPES
             | .AWS.Region = $REGION
             | .AWS.BucketName = $BUCKET_NAME
-            | .AllowedOrigin = $NOTES_FE_API
-            | .AWS.SecretName = $CONFIG_PATH
+            | .AllowedOrigin = $NOTES_FE_URL
+            | .AWS.SecretName = $SECRET_NAME
             | .AWS.GuardrailIdentifier = $GUARDRAIL_IDENTIFIER
             | .AWS.GuardrailVersion = $GUARDRAIL_VERSION
             | .Salesforce.BaseUrl = $SALESFORCE_BASE_URI
             | .AWS.Bedrock.ModelId = $BEDROCK_MODEL_ID
             | .AWS.TranscribeRole = $TRANSCRIBE_ROLE
             | .CDAEnvironment = $CAL_ENV
+            | .Database.TableNamePrefix= $DB_TABLE_NAME_PREFIX
             ' \
             ./Backend/appsettings.json \
             > ./Backend/appsettings.tmp.json
