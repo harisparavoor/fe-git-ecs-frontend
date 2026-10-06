@@ -354,7 +354,7 @@ jobs:
 
           cat ./Backend/webapi/appsettings.json
 
-          echo "appsettings.json is valid JSON."
+          echo "appsettings.json is valid JSON.."
 
 
       # ======================================================================
