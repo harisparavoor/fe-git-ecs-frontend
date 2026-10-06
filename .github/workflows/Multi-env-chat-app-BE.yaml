@@ -331,7 +331,7 @@ jobs:
             | .Frontend.AadClientId = $CHAT_FE_CLIENT_ID
             | .AWS.TranscribeRole = $TRANSCRIBE_ROLE
             | .Hospitals.HospitalNames = $HOSPITAL_NAMES
-            | .Prompts.SystemDescription|=gsub("_SHAREPOINT_SOURCE_URL_"; $SHAREPOINT_URI)
+            | .Prompts.SystemDescription |=gsub("_SHAREPOINT_SOURCE_URL_"; $SHAREPOINT_URI)
             | .CDAEnvironment = $CAL_ENV
             | .Database.TableNamePrefix = $DB_TABLE_NAME_PREFIX
             ' \
