@@ -1,4 +1,4 @@
-name: Multi-env-chat-app-BE-deployment-v1
+name: Multi-env-chat-app-BE
 
 on:
   workflow_dispatch:
@@ -11,11 +11,11 @@ permissions:
 # Resolve environment from the GitHub branch
 #
 # Branch mapping:
-#   dev       -> dev
-#   hotfix/*  -> dev
-#   sit       -> sit
-#   uat       -> uat
-#   prod      -> prod
+#   release/development -> release/development
+#   hotfix/*            -> release/development 
+#   release/stage       -> release/stage
+#   release/uat         -> release/uat
+#   main                -> main
 #
 # No branch input.
 # No environment input.
@@ -56,7 +56,7 @@ jobs:
 
           case "$BRANCH" in
 
-            dev)
+            release/development)
               ENVIRONMENT="dev"
               ;;
 
@@ -64,26 +64,26 @@ jobs:
               ENVIRONMENT="dev"
               ;;
 
-            sit)
+            release/stage)
               ENVIRONMENT="sit"
               ;;
 
-            uat)
+            release/uat)
               ENVIRONMENT="uat"
               ;;
 
-            prod)
+            main)
               ENVIRONMENT="prod"
               ;;
 
             *)
               echo "::error::Branch '$BRANCH' is not allowed for deployment."
               echo "::error::Allowed branches:"
-              echo "::error::  dev"
+              echo "::error::  release/development"
               echo "::error::  hotfix/*"
-              echo "::error::  sit"
-              echo "::error::  uat"
-              echo "::error::  prod"
+              echo "::error::  release/stage"
+              echo "::error::  release/uat"
+              echo "::error::  main"
               exit 1
               ;;
 
@@ -121,11 +121,11 @@ jobs:
     #
     # Environment is automatically resolved from the branch.
     #
-    # dev       -> GitHub Environment: dev
-    # hotfix/*  -> GitHub Environment: dev
-    # sit       -> GitHub Environment: sit
-    # uat       -> GitHub Environment: uat
-    # prod      -> GitHub Environment: prod
+    # release/development    -> GitHub Environment: dev
+    # hotfix/*               -> GitHub Environment: dev
+    # release/stage          -> GitHub Environment: sit
+    # release/uat            -> GitHub Environment: uat
+    # main                   -> GitHub Environment: prod
     #
     # Configure required reviewers for prod under:
     # Repository -> Settings -> Environments -> prod
@@ -193,36 +193,35 @@ jobs:
 
           echo "Validating AWS/ECS configuration..."
 
-          check "AWS_REGION"          ${{ vars.AWS_REGION }}
-          check "ECS_CLUSTER"         ${{ vars.ECS_CLUSTER }} 
-          check "ECS_SERVICE"         ${{ vars.ECS_SERVICE }}
-          check "ECS_CONTAINER_NAME"  "${{ vars.ECS_CONTAINER_NAME }}"
-          check "ECS_TASK_DEFINITION_FAMILY"  ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
-          check "ECR_REPOSITORY"     ${{ vars.ECR_REPOSITORY }}
-          check "AWS_ROLE_ARN"       ${{ secrets.AWS_ROLE_ARN }}
+          check "AWS_REGION"                  "${{ vars.AWS_REGION }}"
+          check "ECS_CLUSTER"                 "${{ vars.ECS_CLUSTER }}"
+          check "ECS_SERVICE"                 "${{ vars.ECS_SERVICE }}"
+          check "ECS_CONTAINER_NAME"          "${{ vars.ECS_CONTAINER_NAME }}"
+          check "ECS_TASK_DEFINITION_FAMILY"  "${{ vars.ECS_TASK_DEFINITION_FAMILY }}"
+          check "ECR_REPOSITORY"              "${{ vars.ECR_REPOSITORY }}"
+          check "AWS_ROLE_ARN"                "${{ secrets.AWS_ROLE_ARN }}"
           
           echo "Validating application configuration..."
-
-          check "TenantId"              "${{ vars.TenantId }}"
-          check "ClientId"              "${{ vars.ClientId }}"
-          check "Scopes"                "${{ vars.myenv }}"
-          check "SecretName"            "${{ vars.SecretName }}"
-          check "AllowedOrigin"         "${{ vars.AllowedOrigin }}"
-          check "GuardrailIdentifier"   "${{ vars.GuardrailIdentifier }}"
-          check "GuardrailVersion"      "${{ vars.GuardrailVersion }}"
-          check "OpenSearchEndpoint"    "${{ vars.OpenSearchEndpoint }}"
-          check "EmbeddingModelId"      "${{ vars.EmbeddingModelId }}"
-          check "TextModelId"           "${{ vars.TextModelId }}"
-          check "TextModelVersion"      "${{ vars.TextModelVersion }}"
-          check "OpenSearchIndexName"   "${{ vars.OpenSearchIndexName }}"
-          check "LibraryFilterKeyName"  "${{ vars.KeyName }}"
-          check "FrontendClientId"      "${{ vars.FrontendClientId }}"
-          check "TranscribeRoleName"    "${{ vars.TranscribeRoleName }}"
-          check "CDAEnvironment"        "${{ vars.CDAEnvironment }}"
-          check "HospitalNames"         "${{ vars.HospitalNames }}"
-          check "SharepointSourceUri"   "${{ vars.SharepointSourceUri }}"
           
-
+          CHECK "TENANT_ID"               "${{ VARS.TENANT_ID }}"
+          CHECK "CLIENT_ID"               "${{ VARS.CLIENT_ID }}"
+          CHECK "API_SCOPES"              "${{ VARS.API_SCOPES }}"
+          CHECK "CONFIG_PATH"             "${{ VARS.CONFIG_PATH }}"
+          CHECK "CHAT_FE_API"             "${{ VARS.CHAT_FE_API }}"
+          CHECK "GUARDRAIL_IDENTIFIER"    "${{ VARS.GUARDRAIL_IDENTIFIER }}"
+          CHECK "GUARDRAIL_VERSION"       "${{ VARS.GUARDRAIL_VERSION }}"
+          CHECK "OPENSEARCH_ENDPOINT"     "${{ VARS.OPENSEARCH_ENDPOINT }}"
+          CHECK "EMBEDDING_MODEL_ID"      "${{ VARS.EMBEDDING_MODEL_ID }}"
+          CHECK "TEXT_MODEL_ID"           "${{ VARS.TEXT_MODEL_ID }}"
+          CHECK "TEXT_MODEL_VERSION"      "${{ VARS.TEXT_MODEL_VERSION }}"
+          CHECK "OPENSEARCH_INDEX_NAME"   "${{ VARS.OPENSEARCH_INDEX_NAME }}"
+          CHECK "LIBRARY_FILTER_KEY_NAME" "${{ VARS.LIBRARY_FILTER_KEY_NAME }}"
+          CHECK "CHAT_FE_CLIENT_ID"       "${{ VARS.CHAT_FE_CLIENT_ID }}"
+          CHECK "TRANSCRIBE_ROLE"         "${{ VARS.TRANSCRIBE_ROLE }}"
+          CHECK "CDA_ENVIRONMENT"         "${{ VARS.CDA_ENVIRONMENT }}"
+          CHECK "HOSPITAL_NAMES"          "${{ VARS.HOSPITAL_NAMES }}"
+          CHECK "SHAREPOINT_URI"          "${{ VARS.SHAREPOINT_URI }}"
+       
 
           # Environment-specific configuration
           case "$TARGET_ENV" in
@@ -259,22 +258,6 @@ jobs:
         with:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            echo "WARNING: No package-lock.json/npm-shrinkwrap.json found."
-            echo "Falling back to 'npm install'. Commit a lock file for reproducible, faster CI builds."
-            npm install
-          fi
      
       # ======================================================================
       # UPDATE APPSETTINGS
@@ -282,25 +265,26 @@ jobs:
       - name: Update appsettings.json
         shell: bash
         env:
-          TENANT_ID:               ${{ vars.TenantId }}
-          CLIENT_ID:               ${{ vars.ClientId }}
-          SCOPES:                  ${{ vars.myenv }}
-          AWS_REGION:              ${{ vars.AWS_REGION }}
-          SECRETNAME:              ${{ vars.SecretName }}
-          ALLOWEDORIGIN:           ${{ vars.AllowedOrigin }}
-          GUARDRAIL_IDENTIFIER:    ${{ vars.GuardrailIdentifier }}
-          GUARDRAIL_VERSION:       ${{ vars.GuardrailVersion }}
-          OPENSEARCH_ENDPOINT:     ${{ vars.OpenSearchEndpoint }}
-          EMBEDDING_MODEL_ID:      ${{ vars.EmbeddingModelId }}
-          TEXT_MODEL_ID:           ${{ vars.TextModelId }}
-          TEXT_MODEL_VERSION:      ${{ vars.TextModelVersion }}
-          OPENSEARCH_INDEX_NAME:   ${{ vars.OpenSearchIndexName }}
-          LIBRARY_FILTER_KEY_NAME: ${{ vars.KeyName }}
-          FRONTEND_CLIENT_ID:      ${{ vars.FrontendClientId }}
-          TRANSCRIBE_ROLE_NAME:    ${{ vars.TranscribeRoleName }}
-          CDA_ENVIRONMENT:         ${{ vars.CDAEnvironment }}
-          HOSPITAL_NAMES:          ${{ vars.HospitalNames }}
-          SHAREPOINT_SOURCE_URL:   ${{ vars.SharepointSourceUri }}
+
+          TENANT_ID:               ${{ VARS.TENANT_ID }}
+          CLIENT_ID:               ${{ VARS.CLIENT_ID }}
+          API_SCOPES:              ${{ VARS.API_SCOPES }}
+          AWS_REGION:              ${{ VARS.AWS_REGION }}
+          CONFIG_PATH:             ${{ VARS.CONFIG_PATH }}
+          CHAT_FE_API:             ${{ VARS.CHAT_FE_API }}
+          GUARDRAIL_IDENTIFIER:    ${{ VARS.GUARDRAIL_IDENTIFIER }}
+          GUARDRAIL_VERSION:       ${{ VARS.GUARDRAIL_VERSION }}
+          OPENSEARCH_ENDPOINT:     ${{ VARS.OPENSEARCH_ENDPOINT }}
+          EMBEDDING_MODEL_ID:      ${{ VARS.EMBEDDING_MODEL_ID }}
+          TEXT_MODEL_ID:           ${{ VARS.TEXT_MODEL_ID }}
+          TEXT_MODEL_VERSION:      ${{ VARS.TEXT_MODEL_VERSION }}
+          OPENSEARCH_INDEX_NAME:   ${{ VARS.OPENSEARCH_INDEX_NAME }}
+          LIBRARY_FILTER_KEY_NAME: ${{ VARS.LIBRARY_FILTER_KEY_NAME }}
+          CHAT_FE_CLIENT_ID:       ${{ VARS.CHAT_FE_CLIENT_ID }}
+          TRANSCRIBE_ROLE:         ${{ VARS.TRANSCRIBE_ROLE }}
+          CDA_ENVIRONMENT:         ${{ VARS.CDA_ENVIRONMENT }}
+          HOSPITAL_NAMES:          ${{ VARS.HOSPITAL_NAMES }}
+          SHAREPOINT_URI:          ${{ VARS.SHAREPOINT_URI }}
 
         run: |
           set -euo pipefail
@@ -308,45 +292,45 @@ jobs:
           test -f ./Backend/webapi/appsettings.json
 
           jq \
-            --arg TenantId "$TENANT_ID" \
-            --arg ClientId "$CLIENT_ID" \
-            --arg Scopes "$SCOPES" \
-            --arg Region "$AWS_REGION" \
-            --arg SecretName "$SECRETNAME" \
-            --arg AllowedOrigins "$ALLOWEDORIGIN" \
-            --arg GuardRailIdentifier "$GUARDRAIL_IDENTIFIER" \
-            --arg GuardRailVersion "$GUARDRAIL_VERSION" \
-            --arg OpenSearchEndpoint "$OPENSEARCH_ENDPOINT" \
-            --arg EmbeddingModelId "$EMBEDDING_MODEL_ID" \
-            --arg TextModelId "$TEXT_MODEL_ID" \
-            --arg TextModelVersion "$TEXT_MODEL_VERSION" \
-            --arg OpenSearchIndexName "$OPENSEARCH_INDEX_NAME" \
-            --arg LibraryFilterKeyName "$LIBRARY_FILTER_KEY_NAME" \
-            --arg FrontendClientId "$FRONTEND_CLIENT_ID" \
-            --arg TranscribeRoleName "$TRANSCRIBE_ROLE_NAME" \
-            --arg CDAEnvironment "$CDA_ENVIRONMENT" \
-            --arg HospitalNames "$HOSPITAL_NAMES" \
-            --arg SharepointUrl "$SHAREPOINT_SOURCE_URL" \
+            --arg TENANT_ID "$TENANT_ID" \
+            --arg CLIENT_ID "$CLIENT_ID" \
+            --arg API_SCOPES "$API_SCOPES" \
+            --arg REGION "$AWS_REGION" \
+            --arg CONFIG_PATH "$CONFIG_PATH" \
+            --arg CHAT_FE_API "$CHAT_FE_API" \
+            --arg GUARDRAIL_IDENTIFIER "$GUARDRAIL_IDENTIFIER" \
+            --arg GUARDRAIL_VERSION "$GUARDRAIL_VERSION" \
+            --arg OPENSEARCH_ENDPOINT "$OPENSEARCH_ENDPOINT" \
+            --arg EMBEDDING_MODEL_ID "$EMBEDDING_MODEL_ID" \
+            --arg TEXT_MODEL_ID "$TEXT_MODEL_ID" \
+            --arg TEXT_MODEL_VERSION "$TEXT_MODEL_VERSION" \
+            --arg OPENSEARCH_INDEX_NAME "$OPENSEARCH_INDEX_NAME" \
+            --arg LIBRARY_FILTER_KEY_NAME "$LIBRARY_FILTER_KEY_NAME" \
+            --arg CHAT_FE_CLIENT_ID "$CHAT_FE_CLIENT_ID" \
+            --arg TRANSCRIBE_ROLE "$TRANSCRIBE_ROLE" \
+            --arg CDA_ENVIRONMENT "$CDA_ENVIRONMENT" \
+            --arg HOSPITAL_NAMES "$HOSPITAL_NAMES" \
+            --arg SHAREPOINT_URI "$SHAREPOINT_URI" \
             '
-            .Authentication.AzureAd.TenantId = $TenantId
-            | .Authentication.AzureAd.ClientId = $ClientId
-            | .Authentication.AzureAd.Scopes = $Scopes
-            | .AWS.Region = $Region
-            | .AWS.SecretName = $SecretName
-            | .AllowedOrigins = $AllowedOrigins
-            | .KernelMemory.Services.GuardRail.Identifier = $GuardRailIdentifier
-            | .KernelMemory.Services.GuardRail.Version = $GuardRailVersion
-            | .OpenSearch.Endpoint = $OpenSearchEndpoint
-            | .OpenSearch.EmbeddingModelId = $EmbeddingModelId
-            | .OpenSearch.TextModelId = $TextModelId
-            | .OpenSearch.TextModelVersion = $TextModelVersion
-            | .OpenSearch.IndexName = $OpenSearchIndexName
-            | .OpenSearch.LibraryFilterKeyName = $LibraryFilterKeyName
-            | .Frontend.AadClientId = $FrontendClientId
-            | .AWS.TranscribeRole = $TranscribeRoleName
-            | .Hospitals.HospitalNames = $HospitalNames 
-            | .Prompts.SystemDescription.SharepointSourceUri= $SharepointUrl
-            | .CDAEnvironment = $CDAEnvironment
+            .Authentication.AzureAd.TenantId = $TENANT_ID
+            | .Authentication.AzureAd.ClientId = $CLIENT_ID
+            | .Authentication.AzureAd.Scopes = $API_SCOPES
+            | .AWS.Region = $REGION
+            | .AWS.SecretName = $CONFIG_PATH
+            | .AllowedOrigins = $CHAT_FE_API
+            | .KernelMemory.Services.GuardRail.Identifier = $GUARDRAIL_IDENTIFIER
+            | .KernelMemory.Services.GuardRail.Version = $GUARDRAIL_VERSION
+            | .OpenSearch.Endpoint = $OPENSEARCH_ENDPOINT
+            | .OpenSearch.EmbeddingModelId = $EMBEDDING_MODEL_ID
+            | .OpenSearch.TextModelId = $TEXT_MODEL_ID
+            | .OpenSearch.TextModelVersion = $TEXT_MODEL_VERSION
+            | .OpenSearch.IndexName = $OPENSEARCH_INDEX_NAME
+            | .OpenSearch.LibraryFilterKeyName = $LIBRARY_FILTER_KEY_NAME
+            | .Frontend.AadClientId = $CHAT_FE_CLIENT_ID
+            | .AWS.TranscribeRole = $TRANSCRIBE_ROLE
+            | .Hospitals.HospitalNames = $HOSPITAL_NAMES
+            | .Prompts.SystemDescription.SharepointSourceUri = $SHAREPOINT_URI
+            | .CDAEnvironment = $CDA_ENVIRONMENT          
             ' \
             ./Backend/webapi/appsettings.json \
             > ./Backend/webapi/appsettings.tmp.json
