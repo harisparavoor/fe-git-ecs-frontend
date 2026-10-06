@@ -206,7 +206,7 @@ jobs:
           check "CLIENT_ID"             "${{ vars.CLIENT_ID }}"
           check "API_SCOPES"             "${{ vars.API_SCOPES }}"
           check "BUCKET_NAME"           "${{ vars.BUCKET_NAME }}"
-          check "NOTE_FE_API    "       "${{ vars.NOTE_FE_API }}"
+          check "NOTES_FE_API    "       "${{ vars.NOTES_FE_API }}"
           check "CONFIG_PATH"           "${{ vars.CONFIG_PATH }}"
           check "GUARDRAIL_IDENTIFIER"  "${{ vars.GUARDRAIL_IDENTIFIER }}"
           check "GUARDRAIL_VERSION"     "${{ vars.GUARDRAIL_VERSION }}"
@@ -267,10 +267,10 @@ jobs:
         env:
           TENANT_ID:             ${{ vars.TENANT_ID }}
           CLIENT_ID:             ${{ vars.CLIENT_ID }}
-          API_SCOPES:             ${{ vars.API_SCOPES }}
+          API_SCOPES:            ${{ vars.API_SCOPES }}
           AWS_REGION:            ${{ vars.AWS_REGION }}
           BUCKET_NAME:           ${{ vars.BUCKET_NAME }}
-          NOTE_FE_API:           ${{ vars.NOTE_FE_API }}
+          NOTES_FE_API:          ${{ vars.NOTES_FE_API }}
           CONFIG_PATH:           ${{ vars.CONFIG_PATH }}
           GUARDRAIL_IDENTIFIER:  ${{ vars.GUARDRAIL_IDENTIFIER }}
           GUARDRAIL_VERSION:     ${{ vars.GUARDRAIL_VERSION }}
@@ -290,7 +290,7 @@ jobs:
             --arg API_SCOPES "$API_SCOPES" \
             --arg REGION "$AWS_REGION" \
             --arg BUCKET_NAME "$BUCKET_NAME" \
-            --arg NOTE_FE_API "$NOTE_FE_API" \
+            --arg NOTES_FE_API "$NOTES_FE_API" \
             --arg CONFIG_PATH "$CONFIG_PATH" \
             --arg GUARDRAIL_IDENTIFIER "$GUARDRAIL_IDENTIFIER" \
             --arg GUARDRAIL_VERSION "$GUARDRAIL_VERSION" \
@@ -304,7 +304,7 @@ jobs:
             | .EntraId.Scope = $API_SCOPES
             | .AWS.Region = $REGION
             | .AWS.BucketName = $BUCKET_NAME
-            | .AllowedOrigin = $NOTE_FE_API
+            | .AllowedOrigin = $NOTES_FE_API
             | .AWS.SecretName = $CONFIG_PATH
             | .AWS.GuardrailIdentifier = $GUARDRAIL_IDENTIFIER
             | .AWS.GuardrailVersion = $GUARDRAIL_VERSION
