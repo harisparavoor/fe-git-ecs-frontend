@@ -222,7 +222,7 @@ jobs:
           CHECK "HOSPITAL_NAMES"          "${{ VARS.HOSPITAL_NAMES }}"
           CHECK "SHAREPOINT_URI"          "${{ VARS.SHAREPOINT_URI }}"
        
-
+          case "$TARGET_ENV" in
           # Environment-specific configuration
           case "$TARGET_ENV" in
             dev)
