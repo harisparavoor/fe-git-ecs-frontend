@@ -333,7 +333,7 @@ jobs:
             | .Hospitals.HospitalNames = $HOSPITAL_NAMES
             | .Prompts.SystemDescription|=gsub("_SHAREPOINT_SOURCE_URL_"; $SHAREPOINT_URI
             | .CDAEnvironment = $CAL_ENV
-            | .DB.TableNamePrefix = $DB_TABLE_NAME_PREFIX      
+            | .Database.TableNamePrefix = $DB_TABLE_NAME_PREFIX
             ' \
             ./Backend/webapi/appsettings.json \
             > ./Backend/webapi/appsettings.tmp.json
