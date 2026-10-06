@@ -1,4 +1,4 @@
-name: Multi-env-portel-app-FE-v2
+name: Multi-env-notes-app-FE
 
 on:
   workflow_dispatch:
@@ -11,11 +11,11 @@ permissions:
 # Resolve environment from the GitHub branch
 #
 # Branch mapping:
-#   dev       -> dev
-#   hotfix/*  -> dev
-#   sit       -> sit
-#   uat       -> uat
-#   prod      -> prod
+#   release/development -> release/development
+#   hotfix/*            -> release/development 
+#   release/stage       -> release/stage
+#   release/uat         -> release/uat
+#   main                -> main
 #
 # No branch input.
 # No environment input.
@@ -56,7 +56,7 @@ jobs:
 
           case "$BRANCH" in
 
-            dev)
+            release/development)
               ENVIRONMENT="dev"
               ;;
 
@@ -64,26 +64,26 @@ jobs:
               ENVIRONMENT="dev"
               ;;
 
-            sit)
+            release/stage)
               ENVIRONMENT="sit"
               ;;
 
-            uat)
+            release/uat)
               ENVIRONMENT="uat"
               ;;
 
-            prod)
+            main)
               ENVIRONMENT="prod"
               ;;
 
             *)
               echo "::error::Branch '$BRANCH' is not allowed for deployment."
               echo "::error::Allowed branches:"
-              echo "::error::  dev"
+              echo "::error::  release/development"
               echo "::error::  hotfix/*"
-              echo "::error::  sit"
-              echo "::error::  uat"
-              echo "::error::  prod"
+              echo "::error::  release/stage"
+              echo "::error::  release/uat"
+              echo "::error::  main"
               exit 1
               ;;
 
@@ -121,11 +121,11 @@ jobs:
     #
     # Environment is automatically resolved from the branch.
     #
-    # dev       -> GitHub Environment: dev
-    # hotfix/*  -> GitHub Environment: dev
-    # sit       -> GitHub Environment: sit
-    # uat       -> GitHub Environment: uat
-    # prod      -> GitHub Environment: prod
+    # release/development    -> GitHub Environment: dev
+    # hotfix/*               -> GitHub Environment: dev
+    # release/stage          -> GitHub Environment: sit
+    # release/uat            -> GitHub Environment: uat
+    # main                   -> GitHub Environment: prod
     #
     # Configure required reviewers for prod under:
     # Repository -> Settings -> Environments -> prod
@@ -192,23 +192,23 @@ jobs:
           }
 
           echo "Validating AWS/ECS configuration..."
-          check "AWS_REGION"                 "${{ vars.AWS_REGION }}"
-          check "ECS_CLUSTER"                "${{ vars.ECS_CLUSTER }}"
-          check "ECS_SERVICE"                "${{ vars.ECS_SERVICE }}"
-          check "ECS_CONTAINER_NAME"         "${{ vars.ECS_CONTAINER_NAME }}"
-          check "ECS_TASK_DEFINITION_FAMILY" "${{ vars.ECS_TASK_DEFINITION_FAMILY }}"
-          check "ECR_REPOSITORY"             "${{ vars.ECR_REPOSITORY }}"
-          check "AWS_ROLE_ARN"               "${{ secrets.AWS_ROLE_ARN }}"
+          check "AWS_REGION"                  "${{ vars.AWS_REGION }}"
+          check "ECS_CLUSTER"                 "${{ vars.ECS_CLUSTER }}"
+          check "ECS_SERVICE"                 "${{ vars.ECS_SERVICE }}"
+          check "ECS_CONTAINER_NAME"          "${{ vars.ECS_CONTAINER_NAME }}"
+          check "ECS_TASK_DEFINITION_FAMILY"  "${{ vars.ECS_TASK_DEFINITION_FAMILY }}"
+          check "ECR_REPOSITORY"              "${{ vars.ECR_REPOSITORY }}"
+          check "AWS_ROLE_ARN"                "${{ secrets.AWS_ROLE_ARN }}"
 
           echo "Validating App values configuration..."
 
-          check "CLIENTID"                   "${{ vars.REACT_APP_AZURE_AD_CLIENTID }}"
-          check "AD_AUTHORITY"               "${{ vars.REACT_APP_AZURE_AD_AUTHORITY }}"
-          check "APP_API_URL"                "${{ vars.REACT_APP_API_URL }}"
-          check "AD_API_SCOPE"               "${{ vars.REACT_APP_AZURE_AD_API_SCOPE }}"
-          check "CHAT_ORIGIN"                "${{ vars.REACT_APP_CHAT_ORIGIN }}"
-          check "NOTES_ORIGIN"               "${{ vars.REACT_APP_NOTES_ORIGIN }}"
-               
+          check "CLIENT_ID"                    "${{ vars.CLIENT_ID }}"
+          check "TENANT_ID"                    "${{ vars.TENANT_ID}}"
+          check "API_SCOPES"                   "${{ vars.API_SCOPES }}"
+          check "NOTE_BE_API"                  "${{ vars.NOTE_BE_API }}"
+          check "PORTAL_FE_API"                "${{ vars.PORTAL_FE_API}}"
+          check "PORTAL_BE_API"                "${{ vars.PORTAL_BE_API }}"
+     
           # Environment-specific configuration.
           case "$TARGET_ENV" in
 
@@ -254,23 +254,6 @@ jobs:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            echo "WARNING: No package-lock.json/npm-shrinkwrap.json found."
-            echo "Falling back to 'npm install'. Commit a lock file for reproducible, faster CI builds."
-            npm install
-          fi
-     
       # ======================================================================
       # Render frontend .env
       #
@@ -282,24 +265,25 @@ jobs:
         shell: bash
 
         env:
-          CLIENTID: ${{ vars.REACT_APP_AZURE_AD_CLIENTID }}
-          AD_AUTHORITY: ${{ vars.REACT_APP_AZURE_AD_AUTHORITY }}
-          APP_API_URL: ${{ vars.REACT_APP_API_URL }}
-          AD_API_SCOPE: ${{ vars.REACT_APP_AZURE_AD_API_SCOPE }}
-          CHAT_ORIGIN: ${{ vars.REACT_APP_CHAT_ORIGIN }}
-          NOTES_ORIGIN: ${{ vars.REACT_APP_NOTES_ORIGIN }}
-
+          CLIENT_ID:            ${{ vars.CLIENT_ID }}
+          TENANT_ID:            ${{ vars.TENANT_ID }}
+          API_SCOPES:           ${{ vars.API_SCOPES }}
+          NOTE_BE_API:          ${{ vars.NOTE_BE_API }}
+          PORTAL_FE_API:        ${{ vars.PORTAL_FE_API}}
+          PORTAL_BE_API:        ${{ vars.PORTAL_BE_API }}
+          AWS_REGION:           ${{ vars.AWS_REGION }}
+          
         run: |
           set -euo pipefail
-
-          test -f ./frontend/.env
-
+         
+          test -f ./frontend/.env.production
+          
           envsubst \
-            '${CLIENTID} ${AD_AUTHORITY} ${APP_API_URL} ${AD_API_SCOPE} ${CHAT_ORIGIN} ${NOTES_ORIGIN}' \
-            < ./frontend/.env \
+            '${CLIENT_ID} ${TENANT_ID} ${API_SCOPES} ${PORTAL_FE_API} ${NOTE_BE_API} ${PORTAL_BE API} ${AWS_REGION}' \
+            < ./frontend/.env.production \
             > /tmp/frontend.env
 
-          mv /tmp/frontend.env ./frontend/.env
+          mv /tmp/frontend.env ./frontend/.env.production
 
 
       # ======================================================================
@@ -309,49 +293,37 @@ jobs:
         shell: bash
 
         env:
-          APP_API_URL: ${{ vars.REACT_APP_API_URL }}
-          CHAT_ORIGIN: ${{ vars.REACT_APP_CHAT_ORIGIN }}
-          NOTES_ORIGIN: ${{ vars.REACT_APP_NOTES_ORIGIN }}
-
+          NOTE_BE_API:         ${{ vars.NOTE_BE_API }}
+          PORTAL_FE_API:       ${{ vars.PORTAL_FE_API }}
+          PORTAL_BE_API:       ${{ vars.PORTAL_BE_API}}
+          
         run: |
           set -euo pipefail
 
           test -f ./frontend/nginx.conf
 
+          export BACKEND_WS_URL="${NOTE_BE_API/https:/wss:}"
           envsubst \
-            '${APP_API_URL} ${CHAT_ORIGIN} ${NOTES_ORIGIN}' \
+           '${PORTAL_FE_API} ${NOTE_BE_API} ${BACKEND_WS_URL} ${PORTAL_BE_API}' \
             < ./frontend/nginx.conf \
             > /tmp/nginx.conf
 
           mv /tmp/nginx.conf ./frontend/nginx.conf
-
-
       # ======================================================================
-      # Render authentication configuration
+      # VERIFY APPSETTINGS
       # ======================================================================
-      - name: Render authentication configuration
+
+      - name: Verify  config files
         shell: bash
-
-        env:
-          APP_API_URL: ${{ vars.REACT_APP_API_URL }}
-          
-          CLIENTID: ${{ vars.REACT_APP_AZURE_AD_CLIENTID }}
-          AD_AUTHORITY: ${{ vars.REACT_APP_AZURE_AD_AUTHORITY }}
-          AD_API_SCOPE: ${{ vars.REACT_APP_AZURE_AD_API_SCOPE }}
 
         run: |
           set -euo pipefail
-
-          test -f ./frontend/src/authConfig.ts
-
-          envsubst \
-            '${APP_API_URL} ${CLIENTID} ${AD_AUTHORITY} ${AD_API_SCOPE}' \
-            < ./frontend/src/authConfig.ts \
-            > /tmp/authConfig.ts
-
-          mv /tmp/authConfig.ts ./frontend/src/authConfig.ts
-
-
+          
+          echo "Valus nginx.conf."
+          cat ./frontend/nginx.conf
+          
+          echo "Valus .env.production."
+          cat ./frontend/.env.production
       # ======================================================================
       # Configure AWS credentials using GitHub OIDC
       # ======================================================================
@@ -361,7 +333,6 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
-
 
       # ======================================================================
       # Login to ECR

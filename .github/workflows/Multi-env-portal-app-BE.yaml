@@ -1,4 +1,5 @@
-name: Multi-env-portal-app-BE-v1
+name: Multi-env-portal-app-BE
+
 
 on:
   workflow_dispatch:
@@ -11,11 +12,11 @@ permissions:
 # Resolve environment from the GitHub branch
 #
 # Branch mapping:
-#   dev       -> dev
-#   hotfix/*  -> dev
-#   sit       -> sit
-#   uat       -> uat
-#   prod      -> prod
+#   release/development -> release/development
+#   hotfix/*            -> release/development 
+#   release/stage       -> release/stage
+#   release/uat         -> release/uat
+#   main                -> main
 #
 # No branch input.
 # No environment input.
@@ -56,7 +57,7 @@ jobs:
 
           case "$BRANCH" in
 
-            dev)
+            release/development)
               ENVIRONMENT="dev"
               ;;
 
@@ -64,26 +65,26 @@ jobs:
               ENVIRONMENT="dev"
               ;;
 
-            sit)
+            release/stage)
               ENVIRONMENT="sit"
               ;;
 
-            uat)
+            release/uat)
               ENVIRONMENT="uat"
               ;;
 
-            prod)
+            main)
               ENVIRONMENT="prod"
               ;;
 
             *)
               echo "::error::Branch '$BRANCH' is not allowed for deployment."
               echo "::error::Allowed branches:"
-              echo "::error::  dev"
+              echo "::error::  release/development"
               echo "::error::  hotfix/*"
-              echo "::error::  sit"
-              echo "::error::  uat"
-              echo "::error::  prod"
+              echo "::error::  release/stage"
+              echo "::error::  release/uat"
+              echo "::error::  main"
               exit 1
               ;;
 
@@ -121,11 +122,11 @@ jobs:
     #
     # Environment is automatically resolved from the branch.
     #
-    # dev       -> GitHub Environment: dev
-    # hotfix/*  -> GitHub Environment: dev
-    # sit       -> GitHub Environment: sit
-    # uat       -> GitHub Environment: uat
-    # prod      -> GitHub Environment: prod
+    # release/development    -> GitHub Environment: dev
+    # hotfix/*               -> GitHub Environment: dev
+    # release/stage          -> GitHub Environment: sit
+    # release/uat            -> GitHub Environment: uat
+    # main                   -> GitHub Environment: prod
     #
     # Configure required reviewers for prod under:
     # Repository -> Settings -> Environments -> prod
@@ -147,17 +148,6 @@ jobs:
       contents: read
 
     steps:
-
-      # ======================================================================
-      # CHECKOUT
-      # ======================================================================
-
-     # - name: Checkout deployment branch
-     #   uses: actions/checkout@v4
-     #   with:
-     #     ref: ${{ needs.resolve-environment.outputs.branch }}
-     #     fetch-depth: 1
-
 
       # ======================================================================
       # DEPLOYMENT INFORMATION
@@ -204,25 +194,26 @@ jobs:
 
           echo "Validating AWS/ECS configuration..."
 
-          check "AWS_REGION"  "${{ vars.AWS_REGION }}"
-          check "ECS_CLUSTER" "${{ vars.ECS_CLUSTER }}"
-          check "ECS_SERVICE" "${{ vars.ECS_SERVICE }}"
-          check "ECS_CONTAINER_NAME" "${{ vars.ECS_CONTAINER_NAME }}"
-          check "ECS_TASK_DEFINITION_FAMILY" ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
-          check "ECR_REPOSITORY" "${{ vars.ECR_REPOSITORY }}"
-          check "AWS_ROLE_ARN" "${{ secrets.AWS_ROLE_ARN }}"
+          check "AWS_REGION"                  "${{ vars.AWS_REGION }}"
+          check "ECS_CLUSTER"                 "${{ vars.ECS_CLUSTER }}"
+          check "ECS_SERVICE"                 "${{ vars.ECS_SERVICE }}"
+          check "ECS_CONTAINER_NAME"          "${{ vars.ECS_CONTAINER_NAME }}"
+          check "ECS_TASK_DEFINITION_FAMILY"  "${{ vars.ECS_TASK_DEFINITION_FAMILY }}"
+          check "ECR_REPOSITORY"              "${{ vars.ECR_REPOSITORY }}"
+          check "AWS_ROLE_ARN"                "${{ secrets.AWS_ROLE_ARN }}"
 
           echo "Validating application configuration..."
 
-          check "TenantId" ${{ vars.TenantId }}
-          check "ClientId" ${{ vars.ClientId }}
-          check "Scopes" ${{ vars.Scopes }}
-          check "SecretName" ${{ vars.SecretName }}
-          check "AIChat" ${{ vars.AIChat }}
-          check "AINotes" ${{ vars.AINotes }}
-          check "WebUrl" ${{ vars.WebUrl }}
-          check "AllowedOrigins"  ${{ vars.AllowedOrigins }}
-          check "CDAEnvironment"  ${{ vars.CDAEnvironment }}
+          check "TENANT_ID"        "${{ vars.TENANT_ID}}"
+          check "CLIENT_ID"        "${{ vars.CLIENT_ID }}"
+          check "API_SCOPES"       "${{ vars.API_SCOPES }}"
+          check "CONFIG_PATH"      "${{ vars.CONFIG_PATH }}"
+          check "CHAT_FE_API"      "${{ vars.CHAT_FE_API }}"
+          check "NOTE_FE_API"      "${{ vars.NOTE_FE_API }}"
+          check "WEB_URL"          "${{ vars.WEB_URL }}"
+          check "FE_APPS_URLS"     "${{ vars.FE_APPS_URLS }}"
+          check "CAL_ENV"          "${{ vars.CAL_ENV }}"
+          
           # Environment-specific configuration
 
           case "$TARGET_ENV" in
@@ -268,26 +259,6 @@ jobs:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
 
-      # Optional sanity build of the app before containerizing.
-      # Remove this step if your Docker build already handles install/build.
-      # -----------------------------------------------------------------
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            echo "WARNING: No package-lock.json/npm-shrinkwrap.json found."
-            echo "Falling back to 'npm install'. Commit a lock file for reproducible, faster CI builds."
-            npm install
-          fi
-     
       # ======================================================================
       # UPDATE APPSETTINGS
       # ======================================================================
@@ -296,43 +267,43 @@ jobs:
         shell: bash
 
         env:
-          TENANT_ID: ${{ vars.TenantId }}
-          CLIENT_ID: ${{ vars.ClientId }}
-          SCOPES: ${{ vars.Scopes }}
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          SECRET_NAME: ${{ vars.SecretName }}
-          AICHAT: ${{ vars.AIChat }}
-          AINOTES: ${{ vars.AINotes }}
-          WEB_URL: ${{ vars.WebUrl }}
-          ALLOWED_ORIGINS: ${{ vars.AllowedOrigins }}
-          CDA_ENVIRONMENT: ${{ vars.CDAEnvironment }}
-
+          TENANT_ID:          ${{ vars.TENANT_ID }}
+          CLIENT_ID:          ${{ vars.CLIENT_ID }}
+          API_SCOPES:         ${{ vars.API_SCOPES }}
+          AWS_REGION:         ${{ vars.AWS_REGION }}
+          CONFIG_PATH:        ${{ vars.CONFIG_PATH }}
+          CHAT_FE_API:        ${{ vars.CHAT_FE_API }}
+          NOTE_FE_API:        ${{ vars.NOTE_FE_API }}
+          WEB_URL:            ${{ vars.WEB_URL }}
+          FE_APPS_URLS:       ${{ vars.FE_APPS_URLS }}
+          CDA_ENVIRONMENT:    ${{ vars.CAL_ENV }}
+        
         run: |
           set -euo pipefail
 
           test -f ./Backend/appsettings.json
 
           jq \
-            --arg TenantId "$TENANT_ID" \
-            --arg ClientId "$CLIENT_ID" \
-            --arg Scopes "$SCOPES" \
-            --arg Region "$AWS_REGION" \
-            --arg SecretName "$SECRET_NAME" \
-            --arg AIChat "$AICHAT" \
-            --arg AINotes "$AINOTES" \
-            --arg WebUrl "$WEB_URL" \
-            --arg AllowedOrigins "$ALLOWED_ORIGINS" \
+            --arg TENANT_ID      "$TENANT_ID" \
+            --arg CLIENT_ID      "$CLIENT_ID" \
+            --arg API_SCOPES     "$API_SCOPES" \
+            --arg REGION         "$AWS_REGION" \
+            --arg CONFIG_PATH    "$CONFIG_PATH" \
+            --arg CHAT_FE_API    "$CHAT_FE_API" \
+            --arg NOTE_FE_API    "$NOTE_FE_API" \
+            --arg WEB_URL        "$WEB_URL" \
+            --arg FE_APPS_URLS   "$FE_APPS_URLS" \
             --arg CDAEnvironment "$CDA_ENVIRONMENT" \
             '
-            .EntraId.TenantId = $TenantId
-            | .EntraId.ClientId = $ClientId
-            | .EntraId.Scopes = $Scopes
-            | .AWS.Region = $Region
-            | .AWS.SecretName = $SecretName
-            | .Navigation.AIChat = $AIChat
-            | .Navigation.AINotes = $AINotes
-            | .BannerOptions.Banners[].WebUrl = $WebUrl
-            | .AllowedOrigins = $AllowedOrigins
+            .EntraId.TenantId = $TENANT_ID
+            | .EntraId.ClientId = $CLIENT_ID
+            | .EntraId.Scopes = $API_SCOPES
+            | .AWS.Region = $REGION
+            | .AWS.SecretName = $CONFIG_PATH
+            | .Navigation.AIChat = $CHAT_FE_API
+            | .Navigation.AINotes = $NOTE_FE_API
+            | .BannerOptions.Banners[].WebUrl = $WEB_URL
+            | .AllowedOrigins = $FE_APPS_URLS
             | .CDAEnvironment = $CDAEnvironment
             ' \
             ./Backend/appsettings.json \
@@ -402,7 +373,6 @@ jobs:
       # ======================================================================
       # BUILD AND PUSH DOCKER IMAGE
       # ======================================================================
-
       - name: Build, tag and push image to Amazon ECR
         id: build-image
         shell: bash
@@ -416,25 +386,17 @@ jobs:
           set -euo pipefail
 
           REPOSITORY_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}"
-          IMAGE_TAG="${SHORT_SHA}"
+          IMAGE_TAG="${SHORT_SHA}-latest"
 
           echo "Repository : $REPOSITORY_URI"
-          echo "Image tag  : $IMAGE_TAG, latest"
+          echo "Image tag  : $IMAGE_TAG"
 
-          # Build backend image
-          # docker build \
-          #  -t "$REPOSITORY_URI:$IMAGE_TAG" \
-          #  -t "$REPOSITORY_URI:latest" \
-          #  ./Backend/
-
-          # Build 
+          #Build backend image
           docker build \
-            -t "$REPOSITORY_URI:$IMAGE_TAG" \
-            -t "$REPOSITORY_URI:latest" .
-
-          # Push the commit tag first, then move "latest" to this image
+           -t "$REPOSITORY_URI:$IMAGE_TAG" \
+           ./Backend/
+          
           docker push "$REPOSITORY_URI:$IMAGE_TAG"
-          docker push "$REPOSITORY_URI:latest"
 
           # Get immutable ECR digest
           IMAGE_DIGEST="$(
@@ -468,37 +430,13 @@ jobs:
         shell: bash
 
         env:
-          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
-          ECS_SERVICE: ${{ vars.ECS_SERVICE }}
           ECS_TASK_DEFINITION_FAMILY: ${{ vars.ECS_TASK_DEFINITION_FAMILY }}
 
         run: |
           set -euo pipefail
 
-          # Task definition the service is actually using (its desired/PRIMARY deployment).
-          CURRENT_TASK_DEF_ARN="$(
-            aws ecs describe-services \
-              --cluster "$ECS_CLUSTER" \
-              --services "$ECS_SERVICE" \
-              --query 'services[0].taskDefinition' \
-              --output text
-          )"
-
-          if [[ -z "$CURRENT_TASK_DEF_ARN" || "$CURRENT_TASK_DEF_ARN" == "None" ]]; then
-            echo "::error::Unable to resolve the task definition for service '$ECS_SERVICE' in cluster '$ECS_CLUSTER'."
-            exit 1
-          fi
-
-          # Sanity check: the service must belong to the expected family.
-          if [[ "$CURRENT_TASK_DEF_ARN" != *":task-definition/${ECS_TASK_DEFINITION_FAMILY}:"* ]]; then
-            echo "::error::Service is running '$CURRENT_TASK_DEF_ARN', which is not in family '$ECS_TASK_DEFINITION_FAMILY'."
-            exit 1
-          fi
-
-          echo "Service is running: $CURRENT_TASK_DEF_ARN"
-
           aws ecs describe-task-definition \
-            --task-definition "$CURRENT_TASK_DEF_ARN" \
+            --task-definition "$ECS_TASK_DEFINITION_FAMILY" \
             --query "taskDefinition" \
             --output json \
             > task-definition.json
@@ -506,6 +444,7 @@ jobs:
           test -s task-definition.json
 
           echo "Task definition downloaded successfully."
+
 
       # ======================================================================
       # UPDATE CONTAINER IMAGE IN TASK DEFINITION

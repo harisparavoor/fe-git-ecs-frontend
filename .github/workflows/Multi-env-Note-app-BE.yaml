@@ -1,4 +1,4 @@
-name: Multi-env-chat-app-FE-deployment-v1
+name: Multi-env-Note-app-BE
 
 on:
   workflow_dispatch:
@@ -11,11 +11,11 @@ permissions:
 # Resolve environment from the GitHub branch
 #
 # Branch mapping:
-#   dev       -> dev
-#   hotfix/*  -> dev
-#   sit       -> sit
-#   uat       -> uat
-#   prod      -> prod
+#   release/development -> release/development
+#   hotfix/*            -> release/development 
+#   release/stage       -> release/stage
+#   release/uat         -> release/uat
+#   main                -> main
 #
 # No branch input.
 # No environment input.
@@ -56,7 +56,7 @@ jobs:
 
           case "$BRANCH" in
 
-            dev)
+            release/development)
               ENVIRONMENT="dev"
               ;;
 
@@ -64,26 +64,26 @@ jobs:
               ENVIRONMENT="dev"
               ;;
 
-            sit)
+            release/stage)
               ENVIRONMENT="sit"
               ;;
 
-            uat)
+            release/uat)
               ENVIRONMENT="uat"
               ;;
 
-            prod)
+            main)
               ENVIRONMENT="prod"
               ;;
 
             *)
               echo "::error::Branch '$BRANCH' is not allowed for deployment."
               echo "::error::Allowed branches:"
-              echo "::error::  dev"
+              echo "::error::  release/development"
               echo "::error::  hotfix/*"
-              echo "::error::  sit"
-              echo "::error::  uat"
-              echo "::error::  prod"
+              echo "::error::  release/stage"
+              echo "::error::  release/uat"
+              echo "::error::  main"
               exit 1
               ;;
 
@@ -121,11 +121,11 @@ jobs:
     #
     # Environment is automatically resolved from the branch.
     #
-    # dev       -> GitHub Environment: dev
-    # hotfix/*  -> GitHub Environment: dev
-    # sit       -> GitHub Environment: sit
-    # uat       -> GitHub Environment: uat
-    # prod      -> GitHub Environment: prod
+    # release/development    -> GitHub Environment: dev
+    # hotfix/*               -> GitHub Environment: dev
+    # release/stage          -> GitHub Environment: sit
+    # release/uat            -> GitHub Environment: uat
+    # main                   -> GitHub Environment: prod
     #
     # Configure required reviewers for prod under:
     # Repository -> Settings -> Environments -> prod
@@ -192,6 +192,7 @@ jobs:
           }
 
           echo "Validating AWS/ECS configuration..."
+
           check "AWS_REGION"                  "${{ vars.AWS_REGION }}"
           check "ECS_CLUSTER"                 "${{ vars.ECS_CLUSTER }}"
           check "ECS_SERVICE"                 "${{ vars.ECS_SERVICE }}"
@@ -199,154 +200,145 @@ jobs:
           check "ECS_TASK_DEFINITION_FAMILY"  "${{ vars.ECS_TASK_DEFINITION_FAMILY }}"
           check "ECR_REPOSITORY"              "${{ vars.ECR_REPOSITORY }}"
           check "AWS_ROLE_ARN"                "${{ secrets.AWS_ROLE_ARN }}"
+        
+          echo "Validating application configuration..."
+          check "TENANT_ID"             "${{ vars.TENANT_ID }}"
+          check "CLIENT_ID"             "${{ vars.CLIENT_ID }}"
+          check "API_SCOPES"             "${{ vars.API_SCOPES }}"
+          check "BUCKET_NAME"           "${{ vars.BUCKET_NAME }}"
+          check "NOTE_FE_API    "       "${{ vars.NOTE_FE_API }}"
+          check "CONFIG_PATH"           "${{ vars.CONFIG_PATH }}"
+          check "GUARDRAIL_IDENTIFIER"  "${{ vars.GUARDRAIL_IDENTIFIER }}"
+          check "GUARDRAIL_VERSION"     "${{ vars.GUARDRAIL_VERSION }}"
+          check "SALESFORCE_BASE_URI"   "${{ vars.SALESFORCE_BASE_URI }}"
+          check "BEDROCK_MODEL_ID"      "${{ vars.BEDROCK_MODEL_ID }}"
+          check "TRANSCRIBE_ROLE"       "${{ vars.TRANSCRIBE_ROLE }}"
+          check "CAL_ENV"               "${{ vars.CAL_ENV }}"
 
-          echo "Validating App values configuration..."
-
-          check "ClientId"        "${{ vars.ClientId }}"
-          check "TenantId"        "${{ vars.TenantId }}"
-          check "Api_Scope"       "${{ vars.Api_Scope }}"
-          check "App_Api_Url"     "${{ vars.App_Api_Url }}"
-          check "Portal_Origin"   "${{ vars.Portal_Origin }}"
-          check "Portal_Api_Url"  "${{ vars.Portal_Api_Url }}"
-          check "AWS_REGION"      "${{ vars.AWS_REGION }}"
-
-           # Environment-specific configuration.
-            case "$TARGET_ENV" in
-
-            prod)
-            check "PROD_Env_specific_value"  "${{ vars.PROD_ENV_SPECIFIC_VALUE }}"
-            ;;
+          case "$TARGET_ENV" in
 
             dev)
-            check "dev_Env_specific_value"   "${{ vars.DEV_ENV_SPECIFIC_VALUE }}"
-            ;;
+              check "DEV_ENV_SPECIFIC_VALUE" "${{ vars.DEV_ENV_SPECIFIC_VALUE }}"
+              ;;
 
             sit)
-            check "sit_Env_specific_value"   "${{ vars.sit_ENV_SPECIFIC_VALUE }}"
-            ;;
+              check "SIT_ENV_SPECIFIC_VALUE" "${{ vars.SIT_ENV_SPECIFIC_VALUE }}"
+              ;;
 
             uat)
-            check "uat_Env_specific_value"   "${{ vars.UAT_ENV_SPECIFIC_VALUE }}"
-            ;;
+              check "UAT_ENV_SPECIFIC_VALUE" "${{ vars.UAT_ENV_SPECIFIC_VALUE }}"
+              ;;
 
-             *)
-            echo "::error::Unknown environment '$TARGET_ENV'."
-            missing=1
-            ;;
+            prod)
+              check "PROD_ENV_SPECIFIC_VALUE" "${{ vars.PROD_ENV_SPECIFIC_VALUE }}"
+              ;;
 
-            esac
+            *)
+              echo "::error::Unknown environment '$TARGET_ENV'"
+              missing=1
+              ;;
 
-            if [[ "$missing" -ne 0 ]]; then
-            echo "::error::One or more required configuration values are missing."
+          esac
+
+          if [[ "$missing" -ne 0 ]]; then
+            echo "::error::Required configuration validation failed."
             exit 1
-            fi
+          fi
 
-            echo "All required configuration values are present."
+          echo "All required configuration values are present."
+
 
       # ======================================================================
       # Checkout selected branch
       # ======================================================================
       - name: Checkout
         uses: actions/checkout@v4
-
         with:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            echo "WARNING: No package-lock.json/npm-shrinkwrap.json found."
-            echo "Falling back to 'npm install'. Commit a lock file for reproducible, faster CI builds."
-            npm install
-          fi
      
       # ======================================================================
-      # Render frontend .env
-      #
-      # IMPORTANT:
-      # Values placed into a frontend build become publicly accessible.
-      # Do NOT place passwords, client secrets, API keys or other secrets here.
+      # UPDATE APPSETTINGS
       # ======================================================================
-      - name: Render frontend .env
+      - name: Update appsettings.json
         shell: bash
 
         env:
-          ClientId:        ${{ vars.ClientId }}
-          TenantId:        ${{ vars.TenantId }}
-          Api_Scope:       ${{ vars.Api_Scope }}
-          App_Api_Url:     ${{ vars.App_Api_Url }}
-          Portal_Origin:   ${{ vars.Portal_Origin }}
-          Portal_Api_Url:  ${{ vars.Portal_Api_Url }}
-          AWS_REGION:      ${{ vars.AWS_REGION }}
-          
+          TENANT_ID:             ${{ vars.TENANT_ID }}
+          CLIENT_ID:             ${{ vars.CLIENT_ID }}
+          API_SCOPES:             ${{ vars.API_SCOPES }}
+          AWS_REGION:            ${{ vars.AWS_REGION }}
+          BUCKET_NAME:           ${{ vars.BUCKET_NAME }}
+          NOTE_FE_API:           ${{ vars.NOTE_FE_API }}
+          CONFIG_PATH:           ${{ vars.CONFIG_PATH }}
+          GUARDRAIL_IDENTIFIER:  ${{ vars.GUARDRAIL_IDENTIFIER }}
+          GUARDRAIL_VERSION:     ${{ vars.GUARDRAIL_VERSION }}
+          SALESFORCE_BASE_URI:   ${{ vars.SALESFORCE_BASE_URI }}
+          BEDROCK_MODEL_ID:      ${{ vars.BEDROCK_MODEL_ID }}
+          TRANSCRIBE_ROLE:       ${{ vars.TRANSCRIBE_ROLE }}
+          CAL_ENV:               ${{ vars.CAL_ENV }}
+
         run: |
           set -euo pipefail
 
-          test -f ./frontend/.env
-          
-          envsubst \
-            '${ClientId} ${TenantId} ${Api_Scope} ${Portal_Origin} ${App_Api_Url} ${Portal_Api_Url} ${AWS_REGION}' \
-            < ./frontend/.env \
-            > /tmp/frontend.env
+          test -f ./Backend/appsettings.json
 
-          mv /tmp/frontend.env ./frontend/.env
+          jq \
+            --arg TENANT_ID "$TENANT_ID" \
+            --arg CLIENT_ID "$CLIENT_ID" \
+            --arg API_SCOPES "$API_SCOPES" \
+            --arg REGION "$AWS_REGION" \
+            --arg BUCKET_NAME "$BUCKET_NAME" \
+            --arg NOTE_FE_API "$NOTE_FE_API" \
+            --arg CONFIG_PATH "$CONFIG_PATH" \
+            --arg GUARDRAIL_IDENTIFIER "$GUARDRAIL_IDENTIFIER" \
+            --arg GUARDRAIL_VERSION "$GUARDRAIL_VERSION" \
+            --arg SALESFORCE_BASE_URI "$SALESFORCE_BASE_URI" \
+            --arg BEDROCK_MODEL_ID "$BEDROCK_MODEL_ID" \
+            --arg TRANSCRIBE_ROLE "$TRANSCRIBE_ROLE" \
+            --arg CAL_ENV "$CAL_ENV" \
+            '
+            .EntraId.TenantId = $TENANT_ID
+            | .EntraId.ClientId = $CLIENT_ID
+            | .EntraId.Scope = $API_SCOPES
+            | .AWS.Region = $REGION
+            | .AWS.BucketName = $BUCKET_NAME
+            | .AllowedOrigin = $NOTE_FE_API
+            | .AWS.SecretName = $CONFIG_PATH
+            | .AWS.GuardrailIdentifier = $GUARDRAIL_IDENTIFIER
+            | .AWS.GuardrailVersion = $GUARDRAIL_VERSION
+            | .Salesforce.BaseUrl = $SALESFORCE_BASE_URI
+            | .AWS.Bedrock.ModelId = $BEDROCK_MODEL_ID
+            | .AWS.TranscribeRole = $TRANSCRIBE_ROLE
+            | .CDAEnvironment = $CAL_ENV
+            ' \
+            ./Backend/appsettings.json \
+            > ./Backend/appsettings.tmp.json
+
+          mv ./Backend/appsettings.tmp.json ./Backend/appsettings.json
 
 
       # ======================================================================
-      # Render nginx configuration
+      # VERIFY APPSETTINGS
       # ======================================================================
-      - name: Render nginx configuration
+
+      - name: Verify appsettings.json
         shell: bash
 
-        env:
-          App_Api_Url:     ${{ vars.App_Api_Url }}
-          Portal_Origin:   ${{ vars.Portal_Origin }}
-          Portal_Api_Url:  ${{ vars.Portal_Api_Url }}
-          
         run: |
           set -euo pipefail
 
-          test -f ./frontend/nginx.conf
+          jq empty ./Backend/appsettings.json
 
-          export BACKEND_WS_URL="${App_Api_Url/https:/wss:}"
-          envsubst \
-           '${Portal_Origin} ${App_Api_Url} ${BACKEND_WS_URL} ${Portal_Api_Url}' \
-            < ./frontend/nginx.conf \
-            > /tmp/nginx.conf
+          cat ./Backend/appsettings.json
 
-          mv /tmp/nginx.conf ./frontend/nginx.conf
-
-      # ======================================================================
-      # Configure AWS credentials using GitHub OIDC
-      # ======================================================================
-      - name: Configure AWS credentials with OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      # ======================================================================
-      # Login to ECR
-      # ======================================================================
-      - name: Login to Amazon ECR
-        id: ecr-login
-        uses: aws-actions/amazon-ecr-login@v2
+          echo "appsettings.json is valid JSON."
 
 
       # ======================================================================
-      # Get source commit hash
+      # GET COMMIT HASH
       # ======================================================================
+
       - name: Get commit hash
         id: commit
         shell: bash
@@ -362,18 +354,39 @@ jobs:
 
           echo "Commit SHA : $COMMIT_SHA"
           echo "Short SHA  : $SHORT_SHA"
+
       # ======================================================================
-      # Build and push Docker image
+      # CONFIGURE AWS CREDENTIALS USING GITHUB OIDC
+      # ======================================================================
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+
+      # ======================================================================
+      # LOGIN TO AMAZON ECR
+      # ======================================================================
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+
+      # ======================================================================
+      # BUILD AND PUSH DOCKER IMAGE
       # ======================================================================
       - name: Build, tag and push image to Amazon ECR
         id: build-image
         shell: bash
-
+        
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           SHORT_SHA: ${{ steps.commit.outputs.short_sha }}
-          
         run: |
           set -euo pipefail
 
@@ -387,7 +400,7 @@ jobs:
           # docker build \
           #  -t "$REPOSITORY_URI:$IMAGE_TAG" \
           #  -t "$REPOSITORY_URI:latest" \
-          #  ./frontend/
+          #  ./Backend/
 
           # Build 
           docker build \
@@ -398,7 +411,7 @@ jobs:
           docker push "$REPOSITORY_URI:$IMAGE_TAG"
           docker push "$REPOSITORY_URI:latest"
 
-          # Resolve the immutable ECR digest.
+          # Get immutable ECR digest
           IMAGE_DIGEST="$(
             aws ecr describe-images \
               --repository-name "$ECR_REPOSITORY" \
@@ -408,23 +421,25 @@ jobs:
           )"
 
           if [[ -z "$IMAGE_DIGEST" || "$IMAGE_DIGEST" == "None" ]]; then
-            echo "::error::Unable to resolve ECR image digest for '$IMAGE_TAG'."
+            echo "::error::Unable to resolve ECR image digest."
             exit 1
           fi
 
-          # Deploy using digest instead of mutable tag.
           IMAGE_URI="${REPOSITORY_URI}@${IMAGE_DIGEST}"
 
-          echo "Immutable image URI: $IMAGE_URI"
+          echo "Immutable image URI:"
+          echo "$IMAGE_URI"
 
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
           echo "image_digest=$IMAGE_DIGEST" >> "$GITHUB_OUTPUT"
           echo "image_uri=$IMAGE_URI" >> "$GITHUB_OUTPUT"
 
+
       # ======================================================================
-      # Download current ECS task definition
+      # DOWNLOAD CURRENT ECS TASK DEFINITION
       # ======================================================================
-      - name: Download current ECS task definition
+
+      - name: Download ECS task definition
         shell: bash
 
         env:
@@ -469,12 +484,10 @@ jobs:
 
 
       # ======================================================================
-      # Update only the specified container image.
-      #
-      # The container is identified by ECS_CONTAINER_NAME and its image is
-      # replaced with the newly built immutable ECR image URI.
+      # UPDATE CONTAINER IMAGE IN TASK DEFINITION
       # ======================================================================
-      - name: Update image in task definition
+
+      - name: Update ECS container image
         id: render-task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
 
@@ -483,10 +496,12 @@ jobs:
           container-name: ${{ vars.ECS_CONTAINER_NAME }}
           image: ${{ steps.build-image.outputs.image_uri }}
 
+
       # ======================================================================
-      # Deploy updated ECS task definition
+      # DEPLOY TO ECS
       # ======================================================================
-      - name: Deploy new task definition to ECS
+
+      - name: Deploy ECS service
         id: deploy-ecs
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
 
@@ -496,15 +511,20 @@ jobs:
           service: ${{ vars.ECS_SERVICE }}
           wait-for-service-stability: true
 
+
       # ======================================================================
-      # Deployment summary
+      # DEPLOYMENT SUMMARY
       # ======================================================================
+
       - name: Deployment summary
         shell: bash
 
         env:
-          ENVIRONMENT: ${{ needs.resolve-environment.outputs.environment }}
           BRANCH: ${{ needs.resolve-environment.outputs.branch }}
+          ENVIRONMENT: ${{ needs.resolve-environment.outputs.environment }}
+          IMAGE_TAG: ${{ steps.build-image.outputs.image_tag }}
+          IMAGE_DIGEST: ${{ steps.build-image.outputs.image_digest }}
+          COMMIT_SHA: ${{ steps.commit.outputs.commit_sha }}
 
         run: |
           {
@@ -512,5 +532,8 @@ jobs:
             echo ""
             echo "- Environment: \`$ENVIRONMENT\`"
             echo "- Branch: \`$BRANCH\`"
-            echo "- Deployment: successful"
+            echo "- Commit: \`$COMMIT_SHA\`"
+            echo "- Image tag: \`$IMAGE_TAG\`"
+            echo "- Image digest: \`$IMAGE_DIGEST\`"
+            echo "- Deployment: **successful**"
           } >> "$GITHUB_STEP_SUMMARY"
