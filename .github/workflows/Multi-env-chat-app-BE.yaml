@@ -330,7 +330,7 @@ jobs:
             | .OpenSearch.LibraryFilterKeyName = $LIBRARY_FILTER_KEY_NAME
             | .Frontend.AadClientId = $CHAT_FE_CLIENT_ID
             | .AWS.TranscribeRole = $TRANSCRIBE_ROLE
-            | .Hospitals.HospitalNames = ($json | fromjson) |
+            | .Hospitals.HospitalNames = ($json | fromjson)
             | .Prompts.SystemDescription |=gsub("_SHAREPOINT_URI_"; $SHAREPOINT_URI)
             | .CDAEnvironment = $CAL_ENV
             | .Database.TableNamePrefix = $DB_TABLE_NAME_PREFIX
