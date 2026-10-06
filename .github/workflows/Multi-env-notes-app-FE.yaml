@@ -279,7 +279,7 @@ jobs:
           test -f ./frontend/.env.production
           
           envsubst \
-            '${CLIENT_ID} ${TENANT_ID} ${API_SCOPES} ${PORTAL_FE_URL} ${NOTES_BE_API} ${PORTAL_BE API} ${AWS_REGION}' \
+            '${CLIENT_ID} ${TENANT_ID} ${API_SCOPES} ${PORTAL_FE_URL} ${NOTES_BE_API} ${PORTAL_BE_API} ${AWS_REGION}' \
             < ./frontend/.env.production \
             > /tmp/frontend.env
 

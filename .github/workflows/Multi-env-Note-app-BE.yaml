@@ -301,7 +301,6 @@ jobs:
             --arg TRANSCRIBE_ROLE "$TRANSCRIBE_ROLE" \
             --arg CAL_ENV "$CAL_ENV" \
             --arg DB_TABLE_NAME_PREFIX "$DB_TABLE_NAME_PREFIX" \
-            
             '
             .EntraId.TenantId = $TENANT_ID
             | .EntraId.ClientId = $CLIENT_ID
@@ -316,7 +315,7 @@ jobs:
             | .AWS.Bedrock.ModelId = $BEDROCK_MODEL_ID
             | .AWS.TranscribeRole = $TRANSCRIBE_ROLE
             | .CDAEnvironment = $CAL_ENV
-            | .Database.TableNamePrefix= $DB_TABLE_NAME_PREFIX
+            | .Database.TableNamePrefix = $DB_TABLE_NAME_PREFIX
             ' \
             ./Backend/appsettings.json \
             > ./Backend/appsettings.tmp.json
