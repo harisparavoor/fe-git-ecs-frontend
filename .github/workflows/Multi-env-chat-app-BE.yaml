@@ -329,7 +329,8 @@ jobs:
             | .AWS.TranscribeRole = $TRANSCRIBE_ROLE
             | .Hospitals.HospitalNames = $HOSPITAL_NAMES
             | .Prompts.SystemDescription.SharepointSourceUri = $SHAREPOINT_URI
-            | .CDAEnvironment = $CDA_ENVIRONMENT          
+            | .CDAEnvironment = $CDA_ENVIRONMENT
+            | .Database.TableNamePrefix =$DATABSE_TABLE_NAME_PREFIX      
             ' \
             ./Backend/webapi/appsettings.json \
             > ./Backend/webapi/appsettings.tmp.json

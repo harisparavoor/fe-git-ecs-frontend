@@ -206,8 +206,8 @@ jobs:
           check "AD_AUTHORITY"          "${{ vars.AD_AUTHORITY }}"
           check "PORTAL_BE_API"         "${{ vars.PORTAL_BE_API }}"
           check "API_SCOPES"            "${{ vars.API_SCOPES }}"
-          check "CHAT_FE_API"           "${{ vars.CHAT_FE_API }}"
-          check "NOTES_FE_API"           "${{ vars.NOTES_FE_API }}"
+          check "CHAT_FE_URL"           "${{ vars.CHAT_FE_URL }}"
+          check "NOTES_FE_URL"           "${{ vars.NOTES_FE_URL }}"
      
           # Environment-specific configuration.
           case "$TARGET_ENV" in
@@ -269,8 +269,8 @@ jobs:
           AD_AUTHORITY:   ${{ vars.AD_AUTHORITY }}
           PORTAL_BE_API:  ${{ vars.PORTAL_BE_API }}
           API_SCOPES:     ${{ vars.API_SCOPES }}
-          CHAT_FE_API:    ${{ vars.CHAT_FE_API }}
-          NOTES_FE_API:   ${{ vars.NOTES_FE_API }}
+          CHAT_FE_URL:    ${{ vars.CHAT_FE_URL }}
+          NOTES_FE_URL:   ${{ vars.NOTES_FE_URL }}
        
                   
         run: |
@@ -279,7 +279,7 @@ jobs:
           test -f ./frontend/.env
 
           envsubst \
-            '${CLIENT_ID} ${AD_AUTHORITY} ${PORTAL_BE_API} ${API_SCOPES} ${CHAT_FE_API} ${NOTES_FE_API}' \
+            '${CLIENT_ID} ${AD_AUTHORITY} ${PORTAL_BE_API} ${API_SCOPES} ${CHAT_FE_URL} ${NOTES_FE_URL}' \
             < ./frontend/.env \
             > /tmp/frontend.env
 
@@ -294,8 +294,8 @@ jobs:
 
         env:
           PORTAL_BE_API:  ${{ vars.PORTAL_BE_API }}
-          CHAT_FE_API:    ${{ vars.CHAT_FE_API }}
-          NOTES_FE_API:   ${{ vars.NOTES_FE_API }}
+          CHAT_FE_URL:    ${{ vars.CHAT_FE_URL }}
+          NOTES_FE_URL:   ${{ vars.NOTES_FE_URL }}
       
 
         run: |
@@ -304,7 +304,7 @@ jobs:
           test -f ./frontend/nginx.conf
 
           envsubst \
-            '${PORTAL_BE_API} ${CHAT_FE_API} ${NOTES_FE_API}' \
+            '${PORTAL_BE_API} ${CHAT_FE_URL} ${NOTES_FE_URL}' \
             < ./frontend/nginx.conf \
             > /tmp/nginx.conf
 

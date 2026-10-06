@@ -204,16 +204,17 @@ jobs:
 
           echo "Validating application configuration..."
 
-          check "TENANT_ID"        "${{ vars.TENANT_ID}}"
-          check "CLIENT_ID"        "${{ vars.CLIENT_ID }}"
-          check "API_SCOPES"       "${{ vars.API_SCOPES }}"
-          check "CONFIG_PATH"      "${{ vars.CONFIG_PATH }}"
-          check "CHAT_FE_API"      "${{ vars.CHAT_FE_API }}"
-          check "NOTES_FE_API"     "${{ vars.NOTES_FE_API }}"
-          check "WEB_URL"          "${{ vars.WEB_URL }}"
-          check "FE_APPS_URLS"     "${{ vars.FE_APPS_URLS }}"
-          check "CAL_ENV"          "${{ vars.CAL_ENV }}"
-          
+          check "TENANT_ID"                         "${{ vars.TENANT_ID}}"
+          check "CLIENT_ID"                         "${{ vars.CLIENT_ID }}"
+          check "API_SCOPES"                        "${{ vars.API_SCOPES }}"
+          check "SECRET_NAME"                       "${{ vars.SECRET_NAME }}"
+          check "CHAT_FE_URL"                       "${{ vars.CHAT_FE_URL }}"
+          check "NOTES_FE_URL"                      "${{ vars.NOTES_FE_URL }}"
+          check "WEB_URL"                           "${{ vars.WEB_URL }}"
+          check "FE_APPS_URLS"                      "${{ vars.FE_APPS_URLS }}"
+          check "CAL_ENV"                           "${{ vars.CAL_ENV }}"
+          check "DB_TABLE_NAME_PREFIX"              "${{ vars.DB_TABLE_NAME_PREFIX }}"
+
           # Environment-specific configuration
 
           case "$TARGET_ENV" in
@@ -267,44 +268,47 @@ jobs:
         shell: bash
 
         env:
-          TENANT_ID:          ${{ vars.TENANT_ID }}
-          CLIENT_ID:          ${{ vars.CLIENT_ID }}
-          API_SCOPES:         ${{ vars.API_SCOPES }}
-          AWS_REGION:         ${{ vars.AWS_REGION }}
-          CONFIG_PATH:        ${{ vars.CONFIG_PATH }}
-          CHAT_FE_API:        ${{ vars.CHAT_FE_API }}
-          NOTES_FE_API:        ${{ vars.NOTES_FE_API }}
-          WEB_URL:            ${{ vars.WEB_URL }}
-          FE_APPS_URLS:       ${{ vars.FE_APPS_URLS }}
-          CDA_ENVIRONMENT:    ${{ vars.CAL_ENV }}
-        
+          TENANT_ID:            ${{ vars.TENANT_ID }}
+          CLIENT_ID:            ${{ vars.CLIENT_ID }}
+          API_SCOPES:           ${{ vars.API_SCOPES }}
+          AWS_REGION:           ${{ vars.AWS_REGION }}
+          SECRET_NAME:          ${{ vars.SECRET_NAME }}
+          CHAT_FE_API:          ${{ vars.CHAT_FE_URL }}
+          NOTES_FE_API:         ${{ vars.NOTES_FE_URL }}
+          WEB_URL:              ${{ vars.WEB_URL }}
+          FE_APPS_URLS:         ${{ vars.FE_APPS_URLS }}
+          CAL_ENV:              ${{ vars.CAL_ENV }}
+          DB_TABLE_NAME_PREFIX: ${{ vars.DB_TABLE_NAME_PREFIX }}
+
         run: |
           set -euo pipefail
 
           test -f ./Backend/appsettings.json
 
           jq \
-            --arg TENANT_ID      "$TENANT_ID" \
-            --arg CLIENT_ID      "$CLIENT_ID" \
-            --arg API_SCOPES     "$API_SCOPES" \
-            --arg REGION         "$AWS_REGION" \
-            --arg CONFIG_PATH    "$CONFIG_PATH" \
-            --arg CHAT_FE_API    "$CHAT_FE_API" \
-            --arg NOTES_FE_API   "$NOTES_FE_API" \
-            --arg WEB_URL        "$WEB_URL" \
-            --arg FE_APPS_URLS   "$FE_APPS_URLS" \
-            --arg CDAEnvironment "$CDA_ENVIRONMENT" \
+            --arg TENANT_ID                   "$TENANT_ID" \
+            --arg CLIENT_ID                   "$CLIENT_ID" \
+            --arg API_SCOPES                  "$API_SCOPES" \
+            --arg REGION                      "$AWS_REGION" \
+            --arg SECRET_NAME                 "$SECRET_NAME" \
+            --arg CHAT_FE_URL                 "$CHAT_FE_URL" \
+            --arg NOTES_FE_URL                "$NOTES_FE_URL" \
+            --arg WEB_URL                     "$WEB_URL" \
+            --arg FE_APPS_URLS                "$FE_APPS_URLS" \
+            --arg CAL_ENV                     "$CAL_ENV" \
+            --arg DB_TABLE_NAME_PREFIX        "$DB_TABLE_NAME_PREFIX" \
             '
             .EntraId.TenantId = $TENANT_ID
             | .EntraId.ClientId = $CLIENT_ID
             | .EntraId.Scopes = $API_SCOPES
             | .AWS.Region = $REGION
-            | .AWS.SecretName = $CONFIG_PATH
-            | .Navigation.AIChat = $CHAT_FE_API
-            | .Navigation.AINotes = $NOTES_FE_API
+            | .AWS.SecretName = $SECRET_NAME
+            | .Navigation.AIChat = $CHAT_FE_URL
+            | .Navigation.AINotes = $NOTES_FE_URL
             | .BannerOptions.Banners[].WebUrl = $WEB_URL
             | .AllowedOrigins = $FE_APPS_URLS
-            | .CDAEnvironment = $CDAEnvironment
+            | .CDAEnvironment= $CAL_ENV
+            | .Database.TableNamePrefix=$DB_TABLE_NAME_PREFIX
             ' \
             ./Backend/appsettings.json \
             > ./Backend/appsettings.tmp.json
