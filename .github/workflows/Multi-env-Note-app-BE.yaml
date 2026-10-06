@@ -215,6 +215,7 @@ jobs:
           check "TRANSCRIBE_ROLE"       "${{ vars.TRANSCRIBE_ROLE }}"
           check "CAL_ENV"               "${{ vars.CAL_ENV }}"
 
+          # Environment-specific configuration
           case "$TARGET_ENV" in
 
             dev)
