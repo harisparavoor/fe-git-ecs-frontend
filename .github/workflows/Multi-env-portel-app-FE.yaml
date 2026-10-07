@@ -206,8 +206,8 @@ jobs:
           check "AD_AUTHORITY"          "${{ vars.AD_AUTHORITY }}"
           check "PORTAL_BE_API"         "${{ vars.PORTAL_BE_API }}"
           check "API_SCOPES"            "${{ vars.API_SCOPES }}"
-          check "CHAT_FE_API"           "${{ vars.CHAT_FE_API }}"
-          check "NOTE_FE_API"           "${{ vars.NOTE_FE_API }}"
+          check "CHAT_FE_URL"           "${{ vars.CHAT_FE_URL }}"
+          check "NOTES_FE_URL"           "${{ vars.NOTES_FE_URL }}"
      
           # Environment-specific configuration.
           case "$TARGET_ENV" in
@@ -253,23 +253,7 @@ jobs:
         with:
           ref: ${{ needs.resolve-environment.outputs.branch }}
           fetch-depth: 0
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
 
-      - name: Install dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            echo "WARNING: No package-lock.json/npm-shrinkwrap.json found."
-            echo "Falling back to 'npm install'. Commit a lock file for reproducible, faster CI builds."
-            npm install
-          fi
-     
       # ======================================================================
       # Render frontend .env
       #
@@ -282,11 +266,11 @@ jobs:
 
         env:
           CLIENT_ID:      ${{ vars.CLIENT_ID }}
-          AD_AUTHORITY:   ${{ vars.AD_AUTHORITYY }}
+          AD_AUTHORITY:   ${{ vars.AD_AUTHORITY }}
           PORTAL_BE_API:  ${{ vars.PORTAL_BE_API }}
           API_SCOPES:     ${{ vars.API_SCOPES }}
-          CHAT_FE_API:    ${{ vars.CHAT_FE_API }}
-          NOTE_FE_API:    ${{ vars.NOTE_FE_API }}
+          CHAT_FE_URL:    ${{ vars.CHAT_FE_URL }}
+          NOTES_FE_URL:   ${{ vars.NOTES_FE_URL }}
        
                   
         run: |
@@ -295,7 +279,7 @@ jobs:
           test -f ./frontend/.env
 
           envsubst \
-            '${CLIENT_ID} ${AD_AUTHORITY} ${PORTAL_BE_API} ${API_SCOPES} ${CHAT_FE_API} ${NOTE_FE_API}' \
+            '${CLIENT_ID} ${AD_AUTHORITY} ${PORTAL_BE_API} ${API_SCOPES} ${CHAT_FE_URL} ${NOTES_FE_URL}' \
             < ./frontend/.env \
             > /tmp/frontend.env
 
@@ -310,8 +294,8 @@ jobs:
 
         env:
           PORTAL_BE_API:  ${{ vars.PORTAL_BE_API }}
-          CHAT_FE_API:    ${{ vars.CHAT_FE_API }}
-          NOTE_FE_API:    ${{ vars.NOTE_FE_API }}
+          CHAT_FE_URL:    ${{ vars.CHAT_FE_URL }}
+          NOTES_FE_URL:   ${{ vars.NOTES_FE_URL }}
       
 
         run: |
@@ -320,7 +304,7 @@ jobs:
           test -f ./frontend/nginx.conf
 
           envsubst \
-            '${PORTAL_BE_API_URL} ${CHAT_FE_API_URL} ${NOTE_FE_API_URL}' \
+            '${PORTAL_BE_API} ${CHAT_FE_URL} ${NOTES_FE_URL}' \
             < ./frontend/nginx.conf \
             > /tmp/nginx.conf
 
@@ -350,7 +334,24 @@ jobs:
             > /tmp/authConfig.ts
 
           mv /tmp/authConfig.ts ./frontend/src/authConfig.ts
+      # ======================================================================
+      # VERIFY APPSETTINGS
+      # ======================================================================
 
+      - name: Verify  config files
+        shell: bash
+
+        run: |
+          set -euo pipefail
+          
+          echo "Valus nginx.conf."
+          cat ./frontend/nginx.conf
+          
+          echo "Valus .env."
+          cat ./frontend/.env
+         
+          echo "Valus authConfig.ts."
+          cat ./frontend/src/authConfig.ts
 
       # ======================================================================
       # Configure AWS credentials using GitHub OIDC
