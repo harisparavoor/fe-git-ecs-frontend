@@ -1,4 +1,4 @@
-name: UAT-Multi-env-portal-app-FE
+name: DEV-New-Multi-env-portal-app-FE
 
 on:
   workflow_dispatch:
