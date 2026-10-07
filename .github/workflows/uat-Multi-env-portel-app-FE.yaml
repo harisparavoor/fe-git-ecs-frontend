@@ -508,4 +508,4 @@ jobs:
             echo "- Environment: \`$ENVIRONMENT\`"
             echo "- Branch: \`$BRANCH\`"
             echo "- Deployment: successful"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARYone"
