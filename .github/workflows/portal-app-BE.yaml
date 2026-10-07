@@ -219,19 +219,19 @@ jobs:
           case "$TARGET_ENV" in
 
             dev)
-              check "DEV_ENV_SPECIFIC_VALUE" "${{ vars.DEV_ENV_SPECIFIC_VALUE }}"
+              
               ;;
 
             sit)
-              check "SIT_ENV_SPECIFIC_VALUE" "${{ vars.SIT_ENV_SPECIFIC_VALUE }}"
+              
               ;;
 
             uat)
-              check "UAT_ENV_SPECIFIC_VALUE" "${{ vars.UAT_ENV_SPECIFIC_VALUE }}"
+              
               ;;
 
             prod)
-              check "PROD_ENV_SPECIFIC_VALUE" "${{ vars.PROD_ENV_SPECIFIC_VALUE }}"
+              
               ;;
 
             *)
