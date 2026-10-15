@@ -1,4 +1,4 @@
-- name: Multi-env-chat-app-FE.yaml
+- name: Multi-env-chat-app-FE
   id: resolve
   shell: bash
   env:
