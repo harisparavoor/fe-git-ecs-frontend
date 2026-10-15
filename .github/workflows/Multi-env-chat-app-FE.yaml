@@ -4,23 +4,19 @@
   env:
   BRANCH: ${{ github.ref_name }}
   run: |
-        set -euo pipefail
+     set -euo pipefail
 
-           # Only allow branches, reject tags
-          if [[ "${GITHUB_REF_TYPE}" != "branch" ]]; then
+     # Only allow branches, reject tags
+     if [[ "${GITHUB_REF_TYPE}" != "branch" ]]; then
             echo "::error::Only branches can be deployed (got ${GITHUB_REF_TYPE})."
             exit 1
           fi
 
-          echo "GitHub branch: $BRANCH"
-
-          case "$BRANCH" in
-            release/development)
-              ENVIRONMENT="dev"
+     echo "GitHub branch: $BRANCH"
+     case "$BRANCH" in
+      release/development)
+        ENVIRONMENT="dev"
               ;;
-            # ... rest of your code stays the same
-              ;;
-
             hotfix/*)
               ENVIRONMENT="dev"
               ;;
@@ -57,8 +53,8 @@
           echo "Environment : $ENVIRONMENT"
           echo "=========================================="
 
- echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
- echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
+         echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+         echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
 
 
 # ============================================================================
