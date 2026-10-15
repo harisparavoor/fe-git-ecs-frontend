@@ -1,14 +1,12 @@
-      - name: Multi-env-chat-app-FE.yaml
-        id: resolve
-        shell: bash
+- name: Multi-env-chat-app-FE.yaml
+  id: resolve
+  shell: bash
+  env:
+  BRANCH: ${{ github.ref_name }}
+  run: |
+        set -euo pipefail
 
-        env:
-          BRANCH: ${{ github.ref_name }}
-
-        run: |
-          set -euo pipefail
-
-          # Only allow branches, reject tags
+           # Only allow branches, reject tags
           if [[ "${GITHUB_REF_TYPE}" != "branch" ]]; then
             echo "::error::Only branches can be deployed (got ${GITHUB_REF_TYPE})."
             exit 1
@@ -59,8 +57,8 @@
           echo "Environment : $ENVIRONMENT"
           echo "=========================================="
 
-          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
-          echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
+ echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+ echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
 
 
 # ============================================================================
