@@ -1,47 +1,3 @@
-name: Multi-env-chat-app-FE
-
-on:
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-# ============================================================================
-# JOB 1
-# Resolve environment from the GitHub branch
-#
-# Branch mapping:
-#   release/development -> release/development
-#   hotfix/*            -> release/development 
-#   release/stage       -> release/stage
-#   release/uat         -> release/uat
-#   main                -> main
-#
-# No branch input.
-# No environment input.
-# ============================================================================
-
-jobs:
-
-  resolve-environment:
-
-    name: Resolve deployment environment
-
-    runs-on: ubuntu-24.04
-
-    permissions:
-      contents: read
-
-    outputs:
-      environment: ${{ steps.resolve.outputs.environment }}
-      branch: ${{ steps.resolve.outputs.branch }}
-
-    steps:
-
-      # ----------------------------------------------------------------------
-      # Resolve environment from branch
-      # ----------------------------------------------------------------------
-
       - name: Resolve environment from branch
         id: resolve
         shell: bash
@@ -52,12 +8,19 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Only allow branches, reject tags
+          if [[ "${GITHUB_REF_TYPE}" != "branch" ]]; then
+            echo "::error::Only branches can be deployed (got ${GITHUB_REF_TYPE})."
+            exit 1
+          fi
+
           echo "GitHub branch: $BRANCH"
 
           case "$BRANCH" in
-
             release/development)
               ENVIRONMENT="dev"
+              ;;
+            # ... rest of your code stays the same
               ;;
 
             hotfix/*)
