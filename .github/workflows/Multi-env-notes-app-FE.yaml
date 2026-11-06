@@ -95,3 +95,23 @@ jobs:
 
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
+          
+      # ======================================================================
+      # DEPLOYMENT SUMMARY
+      # ======================================================================
+
+      - name: Deployment summary
+        shell: bash
+        
+        env:
+          BRANCH: ${{ steps.set-outputs.outputs.branch }}
+          ENVIRONMENT: ${{ steps.set-outputs.outputs.environment }}
+
+        run: |
+          {
+            echo "## ECS Deployment"
+            echo ""
+            echo "- Environment: \`$ENVIRONMENT\`"
+            echo "- Branch: \`$BRANCH\`"
+            echo "- \\*\\*successful\\*\\* * $(date -u '+%d %b %Y, %H:%M:%S UTC')"
+          } >> "$GITHUB_STEP_SUMMARY"
