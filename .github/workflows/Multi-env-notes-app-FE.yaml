@@ -113,5 +113,5 @@ jobs:
             echo ""
             echo "- Environment: \`$ENVIRONMENT\`"
             echo "- Branch: \`$BRANCH\`"
-            echo "- Deployment:  \\ \\  Successful \\..  <sub>$(date -u '+%d %b %Y, %H:%M:%S UTC')</sub>"
+            echo "- Deployment:  \\  Successful \\..  <sub>$(date -u '+%d %b %Y, %H:%M:%S UTC' | tr '[:upper:]' '[:lower:]')</sub>"
           } >> "$GITHUB_STEP_SUMMARY"
